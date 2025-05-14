@@ -37,6 +37,7 @@ from llm.views import (
     delete_content_view,
     fitness_content_search,
     fitness_content_management,
+    ai_chat,
 )
 
 urlpatterns = [
@@ -77,4 +78,6 @@ urlpatterns = [
         name="vector_delete",
     ),
     path("api/vector/delete/", delete_content_view, name="vector_delete_by_body"),
+    # NOTE: AI CHAT ENDPOINTS
+    path("api/chat/", ai_chat, name="ai_chat"),
 ]

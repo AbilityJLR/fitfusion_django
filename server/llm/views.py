@@ -10,7 +10,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.response import Response
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from api.authentication import CookieJWTAuthentication
 from api.models import FitnessContent
 from api.serializer import FitnessContentSerializer
@@ -39,16 +39,17 @@ _pinecone_client = None
 _pinecone_index = None
 _embedding_model = None
 
+
 def init_pinecone():
     """Initialize the Pinecone client and index"""
     global _pinecone_client, _pinecone_index
-    
+
     if not PINECONE_API_KEY:
         raise ValueError("PINECONE_API_KEY environment variable is not set")
-    
+
     if _pinecone_client is None:
         _pinecone_client = Pinecone(api_key=PINECONE_API_KEY)
-        
+
         try:
             existing_indexes = _pinecone_client.list_indexes().names()
             if PINECONE_INDEX_NAME not in existing_indexes:
@@ -60,56 +61,66 @@ def init_pinecone():
                     spec=ServerlessSpec(
                         cloud="aws",
                         region="us-east-1",
-                    )
+                    ),
                 )
                 logger.info(f"Pinecone index {PINECONE_INDEX_NAME} created")
             else:
                 logger.info(f"Using existing Pinecone index: {PINECONE_INDEX_NAME}")
-            
+
             _pinecone_index = _pinecone_client.Index(PINECONE_INDEX_NAME)
         except Exception as e:
             logger.error(f"Error initializing Pinecone: {str(e)}")
             raise
 
+
 def get_embedding_model():
     """Get or initialize the embedding model"""
     global _embedding_model
-    
+
     if _embedding_model is None:
         logger.info(f"Loading embedding model: {MODEL_NAME}")
         _embedding_model = SentenceTransformer(MODEL_NAME)
-    
+
     return _embedding_model
+
 
 def get_embedding(text):
     """Get embedding for text using the model"""
     if not text:
         raise ValueError("Text cannot be empty")
-    
+
     model = get_embedding_model()
     return model.encode(text).tolist()
 
+
 def upsert_fitness_content(fitness_content):
     """Upsert fitness content embedding to Pinecone"""
-    if not fitness_content or not hasattr(fitness_content, "title") or not fitness_content.title:
+    if (
+        not fitness_content
+        or not hasattr(fitness_content, "title")
+        or not fitness_content.title
+    ):
         raise ValueError("Invalid fitness content")
-    
+
     if _pinecone_index is None:
         init_pinecone()
-    
+
     embedding_id = fitness_content.embedding_id or f"fitness-{uuid.uuid4()}"
-    
+
     text_to_embed = f"Title: {fitness_content.title}\nDescription: {fitness_content.description or ''}\n"
     text_to_embed += f"Type: {fitness_content.content_type}\n"
-    
-    if hasattr(fitness_content, "equipment_required") and fitness_content.equipment_required:
+
+    if (
+        hasattr(fitness_content, "equipment_required")
+        and fitness_content.equipment_required
+    ):
         text_to_embed += f"Equipment: {fitness_content.equipment_required}\n"
-        
+
     if hasattr(fitness_content, "target_muscles") and fitness_content.target_muscles:
         text_to_embed += f"Target Muscles: {fitness_content.target_muscles}\n"
-    
+
     embedding = get_embedding(text_to_embed)
-    
+
     metadata = {
         "title": fitness_content.title,
         "description": fitness_content.description or "",
@@ -122,61 +133,64 @@ def upsert_fitness_content(fitness_content):
         "calories_burned": getattr(fitness_content, "calories_burned", 0) or 0,
         "target_muscles": getattr(fitness_content, "target_muscles", "") or "",
     }
-    
+
     try:
         _pinecone_index.upsert(vectors=[(embedding_id, embedding, metadata)])
-        logger.info(f"Upserted content '{fitness_content.title}' to Pinecone (ID: {embedding_id})")
+        logger.info(
+            f"Upserted content '{fitness_content.title}' to Pinecone (ID: {embedding_id})"
+        )
         return embedding_id
     except Exception as e:
         logger.error(f"Error upserting to Pinecone: {str(e)}")
         raise
 
-def search_fitness_content(query_text, content_type=None, difficulty_level=None, filter_dict=None, top_k=5):
+
+def search_fitness_content(
+    query_text, content_type=None, difficulty_level=None, filter_dict=None, top_k=5
+):
     """Search fitness content in Pinecone"""
     if not query_text:
         raise ValueError("Query text cannot be empty")
-    
+
     if _pinecone_index is None:
         init_pinecone()
-    
+
     query_embedding = get_embedding(query_text)
-    
+
     filter_conditions = filter_dict or {}
     if content_type:
         filter_conditions["content_type"] = content_type
     if difficulty_level is not None:
         filter_conditions["difficulty_level"] = difficulty_level
-    
+
     try:
         results = _pinecone_index.query(
             vector=query_embedding,
             filter=filter_conditions if filter_conditions else None,
             top_k=min(top_k, 100),
-            include_metadata=True
+            include_metadata=True,
         )
-        
+
         formatted_results = []
         for match in results.matches:
-            formatted_results.append({
-                "id": match.id,
-                "score": match.score,
-                "metadata": match.metadata
-            })
-        
+            formatted_results.append(
+                {"id": match.id, "score": match.score, "metadata": match.metadata}
+            )
+
         logger.info(f"Search '{query_text}' returned {len(formatted_results)} results")
         return formatted_results
     except Exception as e:
         logger.error(f"Error searching Pinecone: {str(e)}")
         raise
 
+
 def delete_embedding(embedding_id):
-    """Delete an embedding from Pinecone"""
     if not embedding_id:
         raise ValueError("Embedding ID cannot be empty")
-    
+
     if _pinecone_index is None:
         init_pinecone()
-    
+
     try:
         _pinecone_index.delete(ids=[embedding_id])
         logger.info(f"Deleted embedding from Pinecone (ID: {embedding_id})")
@@ -184,17 +198,17 @@ def delete_embedding(embedding_id):
         logger.error(f"Error deleting from Pinecone: {str(e)}")
         raise
 
+
 def bulk_delete_embeddings(embedding_ids):
-    """Delete multiple embeddings from Pinecone"""
     if not embedding_ids:
         return
-    
+
     if _pinecone_index is None:
         init_pinecone()
-        
+
     batch_size = 100
     for i in range(0, len(embedding_ids), batch_size):
-        batch = embedding_ids[i:i + batch_size]
+        batch = embedding_ids[i : i + batch_size]
         try:
             _pinecone_index.delete(ids=batch)
             logger.info(f"Deleted batch of {len(batch)} embeddings from Pinecone")
@@ -202,7 +216,9 @@ def bulk_delete_embeddings(embedding_ids):
             logger.error(f"Error deleting batch from Pinecone: {str(e)}")
             raise
 
+
 init_pinecone()
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -216,15 +232,41 @@ def recommendations_view(request):
         about_me = current_user.about_me or ""
 
         physical_profile = getattr(current_user, "physical_profile", None)
-        height_cm = getattr(physical_profile, "height", "unspecified") if physical_profile else "unspecified"
-        weight_kg = getattr(physical_profile, "weight", "unspecified") if physical_profile else "unspecified"
-        gender = getattr(physical_profile, "gender", "unspecified") if physical_profile else "unspecified"
-        body_fat = getattr(physical_profile, "body_fat", "unspecified") if physical_profile else "unspecified"
-        body_mass = getattr(physical_profile, "body_mass", "unspecified") if physical_profile else "unspecified"
-        health_condition = getattr(physical_profile, "health_condition", "none") if physical_profile else "none"
+        height_cm = (
+            getattr(physical_profile, "height", "unspecified")
+            if physical_profile
+            else "unspecified"
+        )
+        weight_kg = (
+            getattr(physical_profile, "weight", "unspecified")
+            if physical_profile
+            else "unspecified"
+        )
+        gender = (
+            getattr(physical_profile, "gender", "unspecified")
+            if physical_profile
+            else "unspecified"
+        )
+        body_fat = (
+            getattr(physical_profile, "body_fat", "unspecified")
+            if physical_profile
+            else "unspecified"
+        )
+        body_mass = (
+            getattr(physical_profile, "body_mass", "unspecified")
+            if physical_profile
+            else "unspecified"
+        )
+        health_condition = (
+            getattr(physical_profile, "health_condition", "none")
+            if physical_profile
+            else "none"
+        )
 
         fitness_profile = getattr(current_user, "fitness_profile", None)
-        fitness_level_obj = getattr(fitness_profile, "fitness_level", 2) if fitness_profile else 2
+        fitness_level_obj = (
+            getattr(fitness_profile, "fitness_level", 2) if fitness_profile else 2
+        )
         fitness_level_map = {
             1: "beginner",
             2: "intermediate",
@@ -233,37 +275,79 @@ def recommendations_view(request):
             5: "professional",
         }
         fitness_level = fitness_level_map.get(fitness_level_obj, "intermediate")
-        workout_frequency = getattr(fitness_profile, "workout_frequency", 3) if fitness_profile else 3
-        workout_duration = getattr(fitness_profile, "workout_duration", 30) if fitness_profile else 30
-        workout_intensity = getattr(fitness_profile, "workout_intensity", 5) if fitness_profile else 5
-        workout_type = getattr(fitness_profile, "workout_type", "general exercise") if fitness_profile else "general exercise"
-        workout_equipment = getattr(fitness_profile, "workout_equipment", "") if fitness_profile else ""
-        workout_style = getattr(fitness_profile, "workout_style", "") if fitness_profile else ""
-        workout_goal = getattr(fitness_profile, "workout_goal", "general fitness") if fitness_profile else "general fitness"
-        health_goal = getattr(fitness_profile, "health_goal", "general health") if fitness_profile else "general health"
+        workout_frequency = (
+            getattr(fitness_profile, "workout_frequency", 3) if fitness_profile else 3
+        )
+        workout_duration = (
+            getattr(fitness_profile, "workout_duration", 30) if fitness_profile else 30
+        )
+        workout_intensity = (
+            getattr(fitness_profile, "workout_intensity", 5) if fitness_profile else 5
+        )
+        workout_type = (
+            getattr(fitness_profile, "workout_type", "general exercise")
+            if fitness_profile
+            else "general exercise"
+        )
+        workout_equipment = (
+            getattr(fitness_profile, "workout_equipment", "") if fitness_profile else ""
+        )
+        workout_style = (
+            getattr(fitness_profile, "workout_style", "") if fitness_profile else ""
+        )
+        workout_goal = (
+            getattr(fitness_profile, "workout_goal", "general fitness")
+            if fitness_profile
+            else "general fitness"
+        )
+        health_goal = (
+            getattr(fitness_profile, "health_goal", "general health")
+            if fitness_profile
+            else "general health"
+        )
 
         dietary_profile = getattr(current_user, "dietary_profile", None)
-        diet_preference = getattr(dietary_profile, "diet_preference", "balanced nutrition") if dietary_profile else "balanced nutrition"
-        diet_allergies = getattr(dietary_profile, "diet_allergies", "none") if dietary_profile else "none"
-        diet_restrictions = getattr(dietary_profile, "diet_restrictions", "none") if dietary_profile else "none"
-        diet_preferences = getattr(dietary_profile, "diet_preferences", "none") if dietary_profile else "none"
-        diet_goal = getattr(dietary_profile, "diet_goal", "balanced nutrition") if dietary_profile else "balanced nutrition"
+        diet_preference = (
+            getattr(dietary_profile, "diet_preference", "balanced nutrition")
+            if dietary_profile
+            else "balanced nutrition"
+        )
+        diet_allergies = (
+            getattr(dietary_profile, "diet_allergies", "none")
+            if dietary_profile
+            else "none"
+        )
+        diet_restrictions = (
+            getattr(dietary_profile, "diet_restrictions", "none")
+            if dietary_profile
+            else "none"
+        )
+        diet_preferences = (
+            getattr(dietary_profile, "diet_preferences", "none")
+            if dietary_profile
+            else "none"
+        )
+        diet_goal = (
+            getattr(dietary_profile, "diet_goal", "balanced nutrition")
+            if dietary_profile
+            else "balanced nutrition"
+        )
 
         fitness_goals = f"{workout_goal}, {health_goal}".strip(", ")
         nutritional_goals = diet_goal
 
         user_profile = {
             "personalInfo": {
-                "age": age, 
+                "age": age,
                 "occupation": occupation,
                 "gender": gender,
-                "aboutMe": about_me
+                "aboutMe": about_me,
             },
             "physicalAttributes": {
                 "height": height_cm,
                 "weight": weight_kg,
                 "bodyFatPercentage": body_fat,
-                "bodyMass": body_mass
+                "bodyMass": body_mass,
             },
             "fitnessProfile": {
                 "fitnessLevel": fitness_level,
@@ -274,18 +358,16 @@ def recommendations_view(request):
                 "workoutEquipment": workout_equipment,
                 "workoutStyle": workout_style,
                 "workoutGoal": workout_goal,
-                "healthGoal": health_goal
+                "healthGoal": health_goal,
             },
             "nutrition": {
                 "dietPreference": diet_preference,
                 "dietAllergies": diet_allergies,
                 "dietRestrictions": diet_restrictions,
                 "dietPreferences": diet_preferences,
-                "dietGoal": diet_goal
+                "dietGoal": diet_goal,
             },
-            "additionalInfo": {
-                "healthCondition": health_condition
-            },
+            "additionalInfo": {"healthCondition": health_condition},
         }
 
         specific_user_instructions = f"""
@@ -653,12 +735,12 @@ YOUR DETAILED WEEKLY SCHEDULE MUST BE HYPER-PERSONALIZED:
 
 NEVER use placeholders, generic terms, or one-size-fits-all advice.
 EVERY single recommendation must be crafted EXCLUSIVELY for this specific individual.
-Your response must be ONLY valid JSON that follows the requested structure.
+IMPORTANT:Your response must be ONLY valid JSON that follows the requested structure.
 """
 
         message = client.messages.create(
             model="claude-3-7-sonnet-20250219",
-            max_tokens=2000,
+            max_tokens=10000,
             temperature=0.7,
             system=system_prompt,
             messages=[{"role": "user", "content": [{"type": "text", "text": prompt}]}],
@@ -691,6 +773,7 @@ Your response must be ONLY valid JSON that follows the requested structure.
         logger.error(f"Error generating AI recommendations: {str(e)}")
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @authentication_classes([CookieJWTAuthentication])
@@ -698,34 +781,32 @@ def search_content_view(request):
     try:
         data = request.data
         query = data.get("query", "")
-        
+
         if not query:
             return Response(
                 {"error": "Query parameter is required"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        
+
         content_type = data.get("content_type", None)
         difficulty_level = data.get("difficulty_level", None)
         filter_dict = data.get("filters", {})
         top_k = data.get("limit", 5)
-        
+
         results = search_fitness_content(
             query_text=query,
             content_type=content_type,
             difficulty_level=difficulty_level,
             filter_dict=filter_dict,
-            top_k=top_k
+            top_k=top_k,
         )
-        
+
         return Response(results)
-    
+
     except Exception as e:
         logger.error(f"Error searching content: {str(e)}")
-        return Response(
-            {"error": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -733,22 +814,21 @@ def search_content_view(request):
 def upsert_content_view(request):
     try:
         data = request.data
-        
+
         if not data.get("title"):
             return Response(
-                {"error": "Title is required"},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Title is required"}, status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         if not data.get("content_type"):
             return Response(
                 {"error": "Content type is required"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        
+
         class FitnessContent:
             pass
-        
+
         content = FitnessContent()
         content.title = data.get("title")
         content.description = data.get("description", "")
@@ -761,17 +841,15 @@ def upsert_content_view(request):
         content.duration_minutes = data.get("duration_minutes", 0)
         content.calories_burned = data.get("calories_burned", 0)
         content.target_muscles = data.get("target_muscles", "")
-        
+
         embedding_id = upsert_fitness_content(content)
-        
+
         return Response({"success": True, "embedding_id": embedding_id})
-    
+
     except Exception as e:
         logger.error(f"Error upserting content: {str(e)}")
-        return Response(
-            {"error": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
@@ -781,23 +859,21 @@ def delete_content_view(request, embedding_id=None):
         if not embedding_id:
             data = request.data
             embedding_id = data.get("embedding_id")
-            
+
             if not embedding_id:
                 return Response(
                     {"error": "Embedding ID is required"},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-        
+
         delete_embedding(embedding_id)
-        
+
         return Response({"success": True})
-    
+
     except Exception as e:
         logger.error(f"Error deleting content: {str(e)}")
-        return Response(
-            {"error": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -806,30 +882,33 @@ def fitness_content_search(request):
     query = request.GET.get("query", "")
     content_type = request.GET.get("content_type", None)
     difficulty_level = request.GET.get("difficulty_level", None)
-    
+
     if not query:
         return Response(
             {"message": "Query parameter is required", "status": "error"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    
+
     try:
         if difficulty_level and difficulty_level.isdigit():
             difficulty_level = int(difficulty_level)
-        
+
         results = search_fitness_content(
             query_text=query,
             content_type=content_type,
             difficulty_level=difficulty_level,
-            top_k=10
+            top_k=10,
         )
-        
+
         return Response({"results": results, "status": "success"})
-    
+
     except Exception as e:
         logger.error(f"Error searching fitness content: {str(e)}")
         return Response(
-            {"message": f"Error searching fitness content: {str(e)}", "status": "error"},
+            {
+                "message": f"Error searching fitness content: {str(e)}",
+                "status": "error",
+            },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -852,32 +931,32 @@ def fitness_content_management(request, content_id=None):
         else:
             content_type = request.GET.get("content_type", None)
             difficulty_level = request.GET.get("difficulty_level", None)
-            
+
             queryset = FitnessContent.objects.all()
-            
+
             if content_type:
                 queryset = queryset.filter(content_type=content_type)
-                
+
             if difficulty_level and difficulty_level.isdigit():
                 queryset = queryset.filter(difficulty_level=int(difficulty_level))
-                
+
             serializer = FitnessContentSerializer(queryset, many=True)
             return Response(serializer.data)
-    
+
     elif request.method == "POST":
         serializer = FitnessContentSerializer(data=request.data)
         if serializer.is_valid():
             fitness_content = serializer.save()
-            
+
             try:
                 embedding_id = upsert_fitness_content(fitness_content)
-                
+
                 fitness_content.embedding_id = embedding_id
                 fitness_content.save()
-                
+
                 return Response(
-                    FitnessContentSerializer(fitness_content).data, 
-                    status=status.HTTP_201_CREATED
+                    FitnessContentSerializer(fitness_content).data,
+                    status=status.HTTP_201_CREATED,
                 )
             except Exception as e:
                 logger.error(f"Error creating embeddings: {str(e)}")
@@ -885,19 +964,19 @@ def fitness_content_management(request, content_id=None):
                     {
                         "data": serializer.data,
                         "warning": f"Content saved but embedding failed: {str(e)}",
-                        "status": "partial_success"
+                        "status": "partial_success",
                     },
-                    status=status.HTTP_201_CREATED
+                    status=status.HTTP_201_CREATED,
                 )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     elif request.method == "PUT":
         if not content_id:
             return Response(
                 {"message": "Content ID is required", "status": "error"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-            
+
         try:
             fitness_content = FitnessContent.objects.get(id=content_id)
         except FitnessContent.DoesNotExist:
@@ -905,18 +984,20 @@ def fitness_content_management(request, content_id=None):
                 {"message": "Fitness content not found", "status": "error"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-            
-        serializer = FitnessContentSerializer(fitness_content, data=request.data, partial=True)
+
+        serializer = FitnessContentSerializer(
+            fitness_content, data=request.data, partial=True
+        )
         if serializer.is_valid():
             updated_content = serializer.save()
-            
+
             try:
                 embedding_id = upsert_fitness_content(updated_content)
-                
+
                 if not updated_content.embedding_id:
                     updated_content.embedding_id = embedding_id
                     updated_content.save()
-                
+
                 return Response(serializer.data)
             except Exception as e:
                 logger.error(f"Error updating embeddings: {str(e)}")
@@ -924,31 +1005,34 @@ def fitness_content_management(request, content_id=None):
                     {
                         "data": serializer.data,
                         "warning": f"Content updated but embedding failed: {str(e)}",
-                        "status": "partial_success"
+                        "status": "partial_success",
                     }
                 )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     elif request.method == "DELETE":
         if not content_id:
             return Response(
                 {"message": "Content ID is required", "status": "error"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-            
+
         try:
             fitness_content = FitnessContent.objects.get(id=content_id)
-            
+
             if fitness_content.embedding_id:
                 try:
                     delete_embedding(fitness_content.embedding_id)
                 except Exception as e:
                     logger.error(f"Error deleting embedding: {str(e)}")
-            
+
             fitness_content.delete()
-            
+
             return Response(
-                {"message": "Fitness content deleted successfully", "status": "success"},
+                {
+                    "message": "Fitness content deleted successfully",
+                    "status": "success",
+                },
                 status=status.HTTP_204_NO_CONTENT,
             )
         except FitnessContent.DoesNotExist:
@@ -956,3 +1040,29 @@ def fitness_content_management(request, content_id=None):
                 {"message": "Fitness content not found", "status": "error"},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@authentication_classes([CookieJWTAuthentication])
+def ai_chat(request):
+    user = request.user
+    query = request.data.get("query")
+
+    from django.http import StreamingHttpResponse
+
+    def stream_response():
+        with client.messages.stream(
+            model="claude-3-7-sonnet-20250219",
+            max_tokens=1000,
+            temperature=1,
+            system="You are a expert in fitness advisor",
+            messages=[{"role": "user", "content": query}],
+        ) as stream:
+            for text in stream.text_stream:
+                yield text
+
+    return StreamingHttpResponse(
+        streaming_content=stream_response(),
+        content_type='text/plain',
+    )
