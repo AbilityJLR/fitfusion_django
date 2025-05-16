@@ -37,12 +37,13 @@ COPY --from=client-builder /app/client/public ./client/public
 ENV DEBUG=0
 ENV DJANGO_SETTINGS_MODULE=server.settings
 
-# Run database migrations
-RUN python manage.py collectstatic --noinput
-
 # Create a script to create superuser
 RUN echo '#!/bin/bash\n\
+# Run migrations\n\
 python manage.py migrate\n\
+# Collect static files\n\
+python manage.py collectstatic --noinput || echo "Static collection failed but continuing"\n\
+# Create superuser\n\
 python manage.py shell -c "\
 from django.contrib.auth import get_user_model;\
 User = get_user_model();\
@@ -52,6 +53,7 @@ if not User.objects.filter(username=\"tanakrit\").exists():\
 else:\
     print(\"Superuser already exists.\");\
 "\n\
+# Start the server\n\
 exec gunicorn --bind 0.0.0.0:8000 server.wsgi:application\
 ' > /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
