@@ -70,7 +70,7 @@ def init_pinecone():
             _pinecone_index = _pinecone_client.Index(PINECONE_INDEX_NAME)
         except Exception as e:
             logger.error(f"Error initializing Pinecone: {str(e)}")
-            raise
+            _pinecone_client = None
 
 
 def get_embedding_model():
