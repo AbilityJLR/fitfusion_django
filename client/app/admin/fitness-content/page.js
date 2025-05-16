@@ -27,6 +27,7 @@ export default function FitnessContentAdmin() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [successMessage, setSuccessMessage] = useState('')
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   useEffect(() => {
     fetchContents()
@@ -41,7 +42,7 @@ export default function FitnessContentAdmin() {
   const fetchContents = async () => {
     setIsLoading(true)
     try {
-      const response = await axios.get('http://localhost:8000/api/fitness-content/', {
+      const response = await axios.get(`${API_URL}/api/fitness-content/`, {
         withCredentials: true
       })
       setContents(response.data)
@@ -92,12 +93,12 @@ export default function FitnessContentAdmin() {
       }
 
       if (editingId) {
-        await axios.put(`http://localhost:8000/api/fitness-content/${editingId}/`, submitData, {
+        await axios.put(`${API_URL}/api/fitness-content/${editingId}/`, submitData, {
           withCredentials: true
         })
         setSuccessMessage('Content updated successfully')
       } else {
-        await axios.post('http://localhost:8000/api/fitness-content/', submitData, {
+        await axios.post(`${API_URL}/api/fitness-content/`, submitData, {
           withCredentials: true
         })
         setSuccessMessage('Content created successfully')
@@ -134,7 +135,7 @@ export default function FitnessContentAdmin() {
     if (!window.confirm('Are you sure you want to delete this content?')) return
 
     try {
-      await axios.delete(`http://localhost:8000/api/fitness-content/${id}/`, {
+      await axios.delete(`${API_URL}/api/fitness-content/${id}/`, {
         withCredentials: true
       })
       setSuccessMessage('Content deleted successfully')
