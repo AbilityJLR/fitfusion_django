@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
+import Navbar from '@/app/components/Navbar'
+import styles from './Content.module.css'
+import '../../style.css'
 
 export default function FitnessContentAdmin() {
   const router = useRouter()
@@ -28,6 +31,12 @@ export default function FitnessContentAdmin() {
   useEffect(() => {
     fetchContents()
   }, [])
+
+  const getEmbedUrl = (youtube_url) => {
+    if (!youtube_url || typeof youtube_url !== "string") return null;
+    const video_id = youtube_url.split('/').pop();
+    return `https://www.youtube.com/embed/${video_id}`
+  }
 
   const fetchContents = async () => {
     setIsLoading(true)
@@ -73,7 +82,7 @@ export default function FitnessContentAdmin() {
     setIsSubmitting(true)
     setError('')
     setSuccessMessage('')
-    
+
     try {
       const submitData = {
         ...formData,
@@ -81,7 +90,7 @@ export default function FitnessContentAdmin() {
         duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null,
         calories_burned: formData.calories_burned ? parseInt(formData.calories_burned) : null,
       }
-      
+
       if (editingId) {
         await axios.put(`http://localhost:8000/api/fitness-content/${editingId}/`, submitData, {
           withCredentials: true
@@ -93,7 +102,7 @@ export default function FitnessContentAdmin() {
         })
         setSuccessMessage('Content created successfully')
       }
-      
+
       await fetchContents()
       resetForm()
     } catch (err) {
@@ -123,7 +132,7 @@ export default function FitnessContentAdmin() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this content?')) return
-    
+
     try {
       await axios.delete(`http://localhost:8000/api/fitness-content/${id}/`, {
         withCredentials: true
@@ -136,235 +145,255 @@ export default function FitnessContentAdmin() {
     }
   }
 
+  useEffect(() => {
+    if (successMessage) {
+      alert(successMessage);
+    }
+  }, [successMessage]);
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Fitness Content Management</h1>
-      
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">
-          {editingId ? 'Edit Content' : 'Add New Content'}
-        </h2>
-        
-        {successMessage && (
-          <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-4">
-            <p className="text-green-700">{successMessage}</p>
-          </div>
-        )}
-        
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
-            <p className="text-red-700">{error}</p>
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Title</label>
-              <input
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                className="w-full p-2 border rounded"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-1">Content Type</label>
-              <select
-                name="content_type"
-                value={formData.content_type}
-                onChange={handleChange}
-                className="w-full p-2 border rounded"
-                required
-              >
-                <option value="exercise">Exercise</option>
-                <option value="workout">Workout</option>
-                <option value="article">Article</option>
-                <option value="tutorial">Tutorial</option>
-                <option value="diet">Diet</option>
-              </select>
-            </div>
-            
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                className="w-full p-2 border rounded"
-                rows="4"
-                required
-              ></textarea>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-1">URL</label>
-              <input
-                type="url"
-                name="url"
-                value={formData.url}
-                onChange={handleChange}
-                className="w-full p-2 border rounded"
-                placeholder="https://example.com/article"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-1">YouTube URL</label>
-              <input
-                type="url"
-                name="youtube_url"
-                value={formData.youtube_url}
-                onChange={handleChange}
-                className="w-full p-2 border rounded"
-                placeholder="https://youtube.com/watch?v=..."
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-1">Difficulty Level</label>
-              <select
-                name="difficulty_level"
-                value={formData.difficulty_level}
-                onChange={handleChange}
-                className="w-full p-2 border rounded"
-                required
-              >
-                <option value="1">Beginner</option>
-                <option value="2">Intermediate</option>
-                <option value="3">Advanced</option>
-                <option value="4">Expert</option>
-                <option value="5">Professional</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-1">Equipment Required</label>
-              <input
-                type="text"
-                name="equipment_required"
-                value={formData.equipment_required}
-                onChange={handleChange}
-                className="w-full p-2 border rounded"
-                placeholder="Dumbbells, resistance bands, etc."
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-1">Duration (minutes)</label>
-              <input
-                type="number"
-                name="duration_minutes"
-                value={formData.duration_minutes}
-                onChange={handleChange}
-                className="w-full p-2 border rounded"
-                min="0"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-1">Calories Burned</label>
-              <input
-                type="number"
-                name="calories_burned"
-                value={formData.calories_burned}
-                onChange={handleChange}
-                className="w-full p-2 border rounded"
-                min="0"
-              />
-            </div>
-            
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">Target Muscles</label>
-              <input
-                type="text"
-                name="target_muscles"
-                value={formData.target_muscles}
-                onChange={handleChange}
-                className="w-full p-2 border rounded"
-                placeholder="Chest, biceps, legs, etc."
-              />
-            </div>
-          </div>
-          
-          <div className="flex gap-2 mt-4">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-blue-300"
-            >
-              {isSubmitting ? 'Saving...' : editingId ? 'Update Content' : 'Add Content'}
-            </button>
-            
-            {editingId && (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded"
-              >
-                Cancel Edit
-              </button>
+    <div>
+      <Navbar />
+
+      <div className={styles.container}>
+        <div className={styles.contentContainer}>
+          <div className={styles.innerContainer}>
+            <h1 className='gradient-text'>Fitness Content Management</h1>
+            <hr className='line' />
+            <h2>
+              {editingId ? 'Edit Content' : 'Add New Content'}
+            </h2>
+
+            {successMessage && (
+              <div>
+                <p>{successMessage}</p>
+              </div>
             )}
-          </div>
-        </form>
-      </div>
-      
-      <div>
-        <h2 className="text-2xl font-semibold mb-4">Content List</h2>
-        
-        {isLoading ? (
-          <div className="text-center py-8">Loading...</div>
-        ) : contents.length === 0 ? (
-          <div className="bg-gray-50 p-8 text-center rounded-lg">
-            <p className="text-gray-600">No fitness content available. Add your first content above.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {contents.map((content) => (
-              <div key={content.id} className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-lg">{content.title}</h3>
-                    <p className="text-sm text-gray-500">
-                      Type: {content.content_type} | Difficulty: {
-                        content.difficulty_level === 1 ? 'Beginner' :
-                        content.difficulty_level === 2 ? 'Intermediate' :
-                        content.difficulty_level === 3 ? 'Advanced' :
-                        content.difficulty_level === 4 ? 'Expert' : 'Professional'
-                      }
-                    </p>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEdit(content)}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(content.id)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
-                    >
-                      Delete
-                    </button>
-                  </div>
+
+            {error && (
+              <div>
+                <p>{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              <div className={styles.content}>
+                <div>
+                  <label className='form-label'>Title</label>
+                  <input
+                    className='form-input'
+                    type="text"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleChange}
+                    required
+                  />
                 </div>
-                
-                <p className="mt-2 text-sm line-clamp-2">{content.description}</p>
-                
-                {content.embedding_id && (
-                  <div className="mt-2">
-                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Indexed in Pinecone</span>
-                  </div>
+
+                <div>
+                  <label className='form-label'>Content Type</label>
+                  <select
+                    className='form-input'
+                    name="content_type"
+                    value={formData.content_type}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="exercise">Exercise</option>
+                    <option value="workout">Workout</option>
+                    <option value="article">Article</option>
+                    <option value="tutorial">Tutorial</option>
+                    <option value="diet">Diet</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className='form-label'>Description</label>
+                  <textarea
+                    className='form-input'
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows="4"
+                    required
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label className='form-label'>URL</label>
+                  <input
+                    className='form-input'
+                    type="url"
+                    name="url"
+                    value={formData.url}
+                    onChange={handleChange}
+                    placeholder="https://example.com/article"
+                  />
+                </div>
+
+                <div>
+                  <label className='form-label'>YouTube URL</label>
+                  <input
+                    className='form-input'
+                    type="url"
+                    name="youtube_url"
+                    value={formData.youtube_url}
+                    onChange={handleChange}
+                    placeholder="https://youtube.com/watch?v=..."
+                  />
+                </div>
+
+                <div>
+                  <label className='form-label'>Difficulty Level</label>
+                  <select
+                    className='form-input'
+                    name="difficulty_level"
+                    value={formData.difficulty_level}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="1">Beginner</option>
+                    <option value="2">Intermediate</option>
+                    <option value="3">Advanced</option>
+                    <option value="4">Expert</option>
+                    <option value="5">Professional</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className='form-label'>Equipment Required</label>
+                  <input
+                    className='form-input'
+                    type="text"
+                    name="equipment_required"
+                    value={formData.equipment_required}
+                    onChange={handleChange}
+                    placeholder="Dumbbells, resistance bands, etc."
+                  />
+                </div>
+
+                <div>
+                  <label className='form-label'>Duration (minutes)</label>
+                  <input
+                    className='form-input'
+                    type="number"
+                    name="duration_minutes"
+                    value={formData.duration_minutes}
+                    onChange={handleChange}
+                    min="0"
+                  />
+                </div>
+
+                <div>
+                  <label className='form-label'>Calories Burned</label>
+                  <input
+                    className='form-input'
+                    type="number"
+                    name="calories_burned"
+                    value={formData.calories_burned}
+                    onChange={handleChange}
+                    min="0"
+                  />
+                </div>
+
+                <div>
+                  <label className='form-label'>Target Muscles</label>
+                  <input
+                    className='form-input'
+                    type="text"
+                    name="target_muscles"
+                    value={formData.target_muscles}
+                    onChange={handleChange}
+                    placeholder="Chest, biceps, legs, etc."
+                  />
+                </div>
+              </div>
+
+              <div>
+                <button
+                  className='btn btn-primary'
+                  type="submit"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Saving...' : editingId ? 'Update Content' : 'Add Content'}
+                </button>
+
+                {editingId && (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                  >
+                    Cancel Edit
+                  </button>
                 )}
               </div>
-            ))}
+            </form>
           </div>
-        )}
+          <hr className='line' />
+          <div>
+            <h2 style={{ margin: ".5rem 0" }}>Content List</h2>
+
+            {isLoading ? (
+              <div>Loading...</div>
+            ) : contents.length === 0 ? (
+              <div>
+                <p>No fitness content available. Add your first content above.</p>
+              </div>
+            ) : (
+              <div className={styles.contentList}>
+                {contents.map((content) => (
+                  <div key={content.id} className={styles.contentListBox}>
+                    <div>
+                      <div className={styles.retrieveContent}>
+                        <h3>{content.title}</h3>
+                        <iframe width="100%" height="300px"
+                          className={styles.video}
+                          src={getEmbedUrl(content.youtube_url)}
+                          title="YouTube Shorts video"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen>
+                        </iframe>
+                        <p>
+                          <span className='badge-light'>{content.content_type}</span><span className='badge-light'>{
+                            content.difficulty_level === 1 ? 'Beginner' :
+                              content.difficulty_level === 2 ? 'Intermediate' :
+                                content.difficulty_level === 3 ? 'Advanced' :
+                                  content.difficulty_level === 4 ? 'Expert' : 'Professional'
+                          }</span>
+                        </p>
+                      </div>
+                      <div className={styles.descriptionContent}>{content.description}</div>
+
+                      <div className={styles.manageButtonBox}>
+                        <button
+                          className='btn btn-warn'
+                          onClick={() => handleEdit(content)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className='btn btn-danger'
+                          style={{ marginLeft: ".5rem", fontSize: ".875rem" }}
+                          onClick={() => handleDelete(content.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+
+
+                    {content.embedding_id && (
+                      <div style={{ marginTop: "1rem" }}>
+                        <span className='badge-light'>Pinecone</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

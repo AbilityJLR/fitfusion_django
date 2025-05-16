@@ -25,6 +25,59 @@ export const setupAxiosInterceptors = () => {
 };
 
 /**
+ * Register a new user
+ */
+export const register = async (userData) => {
+  try {
+    const response = await axios.post(`${API_URL}/api/register/`, userData, {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      withCredentials: true
+    });
+    
+    return {
+      success: true,
+      data: response.data
+    };
+  } catch (error) {
+    let errorMessage = 'Registration failed';
+    
+    if (error.response && error.response.data) {
+      // Format Django validation errors better
+      if (typeof error.response.data === 'object') {
+        // Django typically returns errors as an object with field names as keys
+        // Extract error messages for cleaner display
+        const errorDetails = [];
+        for (const [field, messages] of Object.entries(error.response.data)) {
+          if (Array.isArray(messages)) {
+            errorDetails.push(`${field}: ${messages.join(', ')}`);
+          } else {
+            errorDetails.push(`${field}: ${messages}`);
+          }
+        }
+        if (errorDetails.length > 0) {
+          errorMessage = errorDetails.join('\n');
+        } else {
+          errorMessage = JSON.stringify(error.response.data);
+        }
+      } else {
+        errorMessage = error.response.data;
+      }
+    } else if (error.request) {
+      errorMessage = 'Network error: No response from server';
+    } else {
+      errorMessage = error.message;
+    }
+    
+    return {
+      success: false,
+      error: errorMessage
+    };
+  }
+};
+
+/**
  * Login user with credentials
  * This uses cookies set by the backend so we don't need to store tokens
  */

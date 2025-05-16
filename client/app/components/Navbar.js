@@ -3,12 +3,44 @@
 import Link from 'next/link'
 import { useAuth } from './AuthProvider'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { getProfile } from '../utils/profile'
+import style from './Navbar.module.css'
+import '../style.css'
 
 export default function Navbar() {
   const { isAuthenticated, isLoading, logout } = useAuth()
   const router = useRouter()
   const [loggingOut, setLoggingOut] = useState(false)
+  const [userProfile, setUserProfile] = useState(null)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef(null)
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const fetchUserProfile = async () => {
+        try {
+          const profile = await getProfile()
+          setUserProfile(profile)
+        } catch (error) {
+          console.error('Error fetching user profile:', error)
+        }
+      }
+      fetchUserProfile()
+    }
+  }, [isAuthenticated])
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   const handleLogout = async () => {
     setLoggingOut(true)
@@ -17,33 +49,84 @@ export default function Navbar() {
     setLoggingOut(false)
   }
 
+  const getUserInitials = () => {
+    if (!userProfile) return '?'
+    const firstName = userProfile.first_name || ''
+    const lastName = userProfile.last_name || ''
+    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase()
+  }
+
+  const toggleDropdown = () => {
+    setDropdownOpen(!dropdownOpen)
+  }
+
   return (
-    <nav className="flex justify-between items-center p-4 border-b border-gray-200 bg-white shadow-sm">
-      <div className="flex space-x-4">
-        <Link href="/" className="text-gray-800 hover:text-blue-600 transition">Home</Link>
-        {isAuthenticated && (
-          <Link href="/dashboard" className="text-gray-800 hover:text-blue-600 transition">Dashboard</Link>
-        )}
-      </div>
-      
-      <div>
-        {isLoading ? (
-          <span className="text-gray-500">Loading...</span>
-        ) : isAuthenticated ? (
-          <button 
-            onClick={handleLogout} 
-            disabled={loggingOut}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:opacity-70"
-          >
-            {loggingOut ? 'Logging out...' : 'Logout'}
-          </button>
-        ) : (
-          <div className="flex space-x-4">
-            <Link href="/login" className="text-gray-800 hover:text-blue-600 transition">Login</Link>
-            <Link href="/register" className="text-gray-800 hover:text-blue-600 transition">Register</Link>
+    <div className={style.navbar_container}>
+      <div className={style.navbar_inner_container}>
+        <div className='logo'>
+          <Link href="/">
+            FitFusion
+          </Link>
+        </div>
+
+        <div className={style.right_inner_container}>
+          <div>
+            <Link href="/">Home</Link>
           </div>
-        )}
+          <div>
+            {isAuthenticated && (
+              <Link href="/dashboard">Dashboard</Link>
+            )}
+          </div>
+          {isLoading ? (
+            <span>Loading...</span>
+          ) : isAuthenticated ? (
+            <div className={style.profile_dropdown_container} ref={dropdownRef}>
+              <div className={style.profile_avatar} onClick={toggleDropdown}>
+                {userProfile?.profile_image ? (
+                  <img
+                    src={userProfile.profile_image}
+                    alt="Profile"
+                    className={style.profile_image}
+                  />
+                ) : (
+                  <div className={style.profile_initials}>
+                    {getUserInitials()}
+                  </div>
+                )}
+              </div>
+              {dropdownOpen && (
+                <div className={style.profile_dropdown}>
+                  <div className={style.dropdown_item}>
+                    <Link href="/profile" onClick={() => setDropdownOpen(false)}>Profile</Link>
+                  </div>
+                  <div className={style.dropdown_item}>
+                    <Link href="/admin/fitness-content" onClick={() => setDropdownOpen(false)}>Add Content</Link>
+                  </div>
+                  <div className={style.dropdown_item}>
+                    <button
+                      onClick={handleLogout}
+                      disabled={loggingOut}
+                      className='btn btn-danger'
+                    >
+                      {loggingOut ? 'Logging out...' : 'Logout'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className={style.navbar_auth_container}>
+              <div>
+                <Link href="/login">Login</Link>
+              </div>
+              <div>
+                <Link href="/register">Register</Link>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </nav>
+    </div>
   )
 } 

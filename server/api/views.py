@@ -4,6 +4,8 @@ from rest_framework.decorators import (
     authentication_classes,
 )
 from rest_framework.response import Response
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.views import APIView
 from .models import User, PhysicalProfile, FitnessProfile, DietaryProfile, FitnessContent
 from .serializer import (
     RegisterSerializer,
@@ -36,7 +38,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 httponly=True,
                 secure=True,
                 samesite="Lax",
-                max_age=3600,  
+                max_age=30 * 24 * 60 * 60,  # 30 days in seconds
             )
             response.set_cookie(
                 key="refresh_token",
@@ -44,7 +46,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 httponly=True,
                 secure=True,
                 samesite="Lax",
-                max_age=7 * 24 * 60 * 60,
+                max_age=30 * 24 * 60 * 60,  # 30 days in seconds
             )
 
         return response
@@ -64,52 +66,54 @@ class CustomTokenRefreshView(TokenRefreshView):
                 httponly=True,
                 secure=True,
                 samesite="Lax",
-                max_age=3600,
+                max_age=30 * 24 * 60 * 60,  # 30 days in seconds
             )
 
         return response
 
 
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def RegisterView(request):
-    serializer = RegisterSerializer(data=request.data)
-    if serializer.is_valid():
-        user = serializer.save()
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    
+    def post(self, request, *args, **kwargs):
+        serializer = RegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
 
-        has_physical = hasattr(user, "physical_profile")
-        has_fitness = hasattr(user, "fitness_profile")
-        has_dietary = hasattr(user, "dietary_profile")
+            has_physical = hasattr(user, "physical_profile")
+            has_fitness = hasattr(user, "fitness_profile")
+            has_dietary = hasattr(user, "dietary_profile")
 
-        response_data = {
-            "message": "User registered successfully",
-            "user_id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "profiles_created": {
-                "basic_profile": True,
-                "physical_profile": has_physical,
-                "fitness_profile": has_fitness,
-                "dietary_profile": has_dietary,
-            },
-        }
+            response_data = {
+                "message": "User registered successfully",
+                "user_id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "profiles_created": {
+                    "basic_profile": True,
+                    "physical_profile": has_physical,
+                    "fitness_profile": has_fitness,
+                    "dietary_profile": has_dietary,
+                },
+            }
 
-        if not (has_physical and has_fitness and has_dietary):
-            missing_profiles = []
-            if not has_physical:
-                missing_profiles.append("physical profile")
-            if not has_fitness:
-                missing_profiles.append("fitness profile")
-            if not has_dietary:
-                missing_profiles.append("dietary profile")
+            if not (has_physical and has_fitness and has_dietary):
+                missing_profiles = []
+                if not has_physical:
+                    missing_profiles.append("physical profile")
+                if not has_fitness:
+                    missing_profiles.append("fitness profile")
+                if not has_dietary:
+                    missing_profiles.append("dietary profile")
 
-            response_data["next_steps"] = (
-                f"You can complete your {', '.join(missing_profiles)} later using the profile setup endpoint."
-            )
-            response_data["setup_endpoint"] = "/api/profile/setup/"
+                response_data["next_steps"] = (
+                    f"You can complete your {', '.join(missing_profiles)} later using the profile setup endpoint."
+                )
+                response_data["setup_endpoint"] = "/api/profile/setup/"
 
-        return Response(response_data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(response_data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["GET", "PUT"])
@@ -406,12 +410,20 @@ def profile_setup_view(request):
         physical_profile_data = data.get("physical_profile", {})
         fitness_profile_data = data.get("fitness_profile", {})
         dietary_profile_data = data.get("dietary_profile", {})
+        
+        # Debug logging
+        print("===== PROFILE SETUP DEBUG =====")
+        print(f"User profile data: {user_profile_data}")
+        print(f"Physical profile data: {physical_profile_data}")
+        print(f"Fitness profile data: {fitness_profile_data}")
+        print(f"Dietary profile data: {dietary_profile_data}")
 
         if user_profile_data:
             serializer = ProfileSerializer(user, data=user_profile_data, partial=True)
             if serializer.is_valid():
                 serializer.save()
             else:
+                print(f"User profile serializer errors: {serializer.errors}")
                 return Response(
                     {
                         "status": "error",
@@ -448,6 +460,7 @@ def profile_setup_view(request):
                 else:
                     serializer.save(user=user)
             else:
+                print(f"Physical profile serializer errors: {serializer.errors}")
                 return Response(
                     {
                         "status": "error",
@@ -491,6 +504,7 @@ def profile_setup_view(request):
                 else:
                     serializer.save(user=user)
             else:
+                print(f"Fitness profile serializer errors: {serializer.errors}")
                 return Response(
                     {
                         "status": "error",
@@ -507,8 +521,12 @@ def profile_setup_view(request):
                     profile, data=dietary_profile_data, partial=True
                 )
             except DietaryProfile.DoesNotExist:
-                if "diet_goal" not in dietary_profile_data:
-                    dietary_profile_data["diet_goal"] = ""
+                # Make sure all required fields have default values
+                required_fields = ["diet_preference", "diet_allergies", "diet_restrictions", "diet_preferences", "diet_goal"]
+                for field in required_fields:
+                    if field not in dietary_profile_data:
+                        dietary_profile_data[field] = ""
+                        
                 serializer = DietaryProfileSerializer(data=dietary_profile_data)
 
             if serializer.is_valid():
@@ -517,6 +535,7 @@ def profile_setup_view(request):
                 else:
                     serializer.save(user=user)
             else:
+                print(f"Dietary profile serializer errors: {serializer.errors}")
                 return Response(
                     {
                         "status": "error",

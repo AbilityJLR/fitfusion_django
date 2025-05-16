@@ -1,17 +1,23 @@
 'use client'
 
 import { useState } from 'react';
-import axios from 'axios';
+import { useRouter } from 'next/navigation';
+import { register } from '../utils/auth';
+import style from './Register.module.css'
+import Navbar from '../components/Navbar';
+import '../style.css'
 
-export default function () {
+export default function Register() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
     username: '',
     password: '',
-    password2: '',
-    fullname 
+    password2: ''
   })
   const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const handleChange = (e) => {
     setFormData(prev => ({
@@ -23,42 +29,60 @@ export default function () {
   const onSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
-    console.log('Submitting data:', formData);
-    
+    setLoading(true);
+
     try {
-      const response = await axios.post('http://localhost:8000/api/register/', formData, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      console.log("Success:", response.data)
-    } catch (error) {
-      console.error('Error sending data:', error.message, error.code, error);
-      if (error.response) {
-        console.error('Server Error Response:', error.response.data);
-        setErrorMessage(JSON.stringify(error.response.data));
+      const result = await register(formData);
+
+      if (result.success) {
+        console.log("Registration successful:", result.data);
+        setSuccess(true);
+
+        // Redirect to login page after successful registration
+        setTimeout(() => {
+          router.push('/profile/setup');
+        }, 1500); // Short delay to show success message
+      } else {
+        setErrorMessage(result.error);
       }
+    } catch (error) {
+      console.error('Error during registration:', error);
+      setErrorMessage('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
     <div>
+      <Navbar />
+      {loading && <div>Loading...</div>}
+      {success && (
+        <div style={{ color: 'green', margin: '10px 0' }}>
+          Registration successful! You can now log in.
+        </div>
+      )}
       {errorMessage && (
-        <div style={{ color: 'red', margin: '10px 0' }}>
+        <div style={{ color: 'red', margin: '10px 0', whiteSpace: 'pre-line' }}>
           {errorMessage}
         </div>
       )}
-      <form onSubmit={onSubmit}>
-        <label>email</label>
-        <input type='email' name='email' value={formData.email} onChange={handleChange} placeholder='email' required />
-        <label>username</label>
-        <input name='username' value={formData.username} onChange={handleChange} placeholder='username' required />
-        <label>password</label>
-        <input type='password' name='password' value={formData.password} onChange={handleChange} placeholder='password' required />
-        <label>confirm password</label>
-        <input type='password' name='password2' value={formData.password2} onChange={handleChange} placeholder='confirm password' required />
-        <input type='submit' />
-      </form>
+      <div className={style.container}>
+        <div className={style.inner_container}>
+          <h1>Register</h1>
+          <form onSubmit={onSubmit}>
+            <label className='form-label'>email</label>
+            <input className='form-input' type='email' name='email' value={formData.email} onChange={handleChange} placeholder='email' required />
+            <label className='form-label'>username</label>
+            <input className='form-input' name='username' value={formData.username} onChange={handleChange} placeholder='username' required />
+            <label className='form-label'>password</label>
+            <input className='form-input' type='password' name='password' value={formData.password} onChange={handleChange} placeholder='password' required />
+            <label className='form-label'>confirm password</label>
+            <input className='form-input' type='password' name='password2' value={formData.password2} onChange={handleChange} placeholder='confirm password' required />
+            <input className='btn btn-primary' type='submit' disabled={loading} />
+          </form>
+        </div>
+      </div>
     </div>
   )
 }

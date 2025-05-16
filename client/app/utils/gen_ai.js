@@ -6,7 +6,7 @@ axios.defaults.withCredentials = true;
 
 let isRequestInProgress = false;
 
-export default async function getGenAI(query) {
+export default async function getGenAI(query, onStreamUpdate) {
   if (isRequestInProgress) {
     console.log('chat request already in progress, skipping duplicate call');
     return null;
@@ -14,12 +14,23 @@ export default async function getGenAI(query) {
 
   try {
     isRequestInProgress = true;
-    const response = await axios.post(`${API_URL}/api/chat/`, { query: query })
-    console.log(response)
-    return response.data
+    const response = await axios.post(`${API_URL}/api/chat/`, 
+      { query: query },
+      { 
+        responseType: 'text',
+        onDownloadProgress: (progressEvent) => {
+          const text = progressEvent.event.target.responseText;
+          if (text && onStreamUpdate) {
+            onStreamUpdate(text);
+          }
+        }
+      }
+    );
+    
+    return { reply: response.data };
   } catch (error) {
-    console.log(error)
-    throw error
+    console.log(error);
+    throw error;
   } finally {
     isRequestInProgress = false;
   }

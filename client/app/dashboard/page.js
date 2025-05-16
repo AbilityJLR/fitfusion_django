@@ -1,61 +1,60 @@
 'use client'
 
-import { getProfile, getPhysicalProfile, getFitnessProfile, getDietaryProfile } from '../utils/profile'
+import { getProfile } from '../utils/profile'
 import getRecommendations from '../utils/recommendations'
+import { getSearch } from '../utils/rag-search'
 import getGenAI from '../utils/gen_ai'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '../components/Navbar'
+import styles from './Dashboard.module.css'
+import Link from 'next/link'
+import ReactMarkdown from 'react-markdown'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import remarkGfm from 'remark-gfm'
+import '../style.css'
 
 export default function Dashboard() {
   const router = useRouter()
+  const [search, setSearch] = useState([])
   const [chat, setChat] = useState('')
   const [chatResponse, setChatResponse] = useState('')
+  const [isStreaming, setIsStreaming] = useState(false)
   const [loading, setLoading] = useState(true)
   const [userData, setUserData] = useState(null)
-  const [physicalData, setPhysicalData] = useState(null)
-  const [fitnessData, setFitnessData] = useState(null)
-  const [dietaryData, setDietaryData] = useState(null)
+  const [recommendations, setRecommendations] = useState(null)
   const [error, setError] = useState(null)
-  const [navigating, setNavigating] = useState(false)
+  const [clicked, setClicked] = useState(false)
+
+  const loadRecommendations = async () => {
+    setLoading(true)
+    try {
+      const recommendationData = await getRecommendations()
+      if (recommendationData) {
+        console.log('Recommendations loaded:', recommendationData)
+        setRecommendations(recommendationData)
+        localStorage.setItem('recommendations', JSON.stringify(recommendationData))
+      }
+    } catch (err) {
+      console.log('Error loading recommendations:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchAllData = async () => {
+    const stored = localStorage.getItem('recommendations')
+    if (stored) {
+      setRecommendations(JSON.parse(stored))
+    } else {
+      loadRecommendations()
+    }
+
+    const fetchData = async () => {
       setLoading(true)
       try {
         const userProfile = await getProfile()
         setUserData(userProfile)
-
-        try {
-          const physical = await getPhysicalProfile()
-          setPhysicalData(physical)
-        } catch (err) {
-          console.log('Physical profile not found')
-        }
-
-        try {
-          const fitness = await getFitnessProfile()
-          setFitnessData(fitness)
-        } catch (err) {
-          console.log('Fitness profile not found')
-        }
-
-        try {
-          const dietary = await getDietaryProfile()
-          setDietaryData(dietary)
-        } catch (err) {
-          console.log('Dietary profile not found')
-        }
-
-        // try {
-        //   const recommendations = await getRecommendations()
-        //   if (recommendations) {
-        //     console.log('Recommendations loaded:', recommendations)
-        //   }
-        // } catch (err) {
-        //   console.log('Error loading recommendations:', err)
-        // }
-
       } catch (err) {
         setError('Failed to fetch profile data')
         console.error(err)
@@ -64,162 +63,232 @@ export default function Dashboard() {
       }
     }
 
-    fetchAllData()
+    fetchData()
   }, [])
 
   const onSubmitChat = async (e) => {
     e.preventDefault()
+    setChatResponse('')
+    setClicked(true)
+    setIsStreaming(true)
+    setLoading(true)
+
     try {
-      const response = await getGenAI(chat)
-      if (response) {
-        setChatResponse(response.reply)
-      }
+      await getGenAI(chat, (streamText) => {
+        setChatResponse(streamText)
+      })
     } catch (err) {
       console.log('error', err)
+    } finally {
+      setIsStreaming(false)
+    }
+
+    try {
+      const searchResults = await getSearch(chat)
+      console.log(searchResults)
+      setSearch(searchResults)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleCompleteProfile = () => {
-    setNavigating(true)
-    router.push('/profile/setup')
+  const handleRecommendBotton = async () => {
+    try {
+      const recommendationData = await getRecommendations()
+      if (recommendationData) {
+        console.log('Recommendations loaded:', recommendationData)
+        setRecommendations(recommendationData)
+      }
+    } catch (err) {
+      console.log('Error loading recommendations:', err)
+    }
   }
 
-  if (loading) {
-    return (
-      <div>
-        <Navbar />
-        <div className="flex justify-center items-center h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      </div>
-    )
-  }
-
-  if (navigating) {
-    return (
-      <div>
-        <Navbar />
-        <div className="flex justify-center items-center h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          <p className="ml-3">Navigating to profile setup...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div>
-        <Navbar />
-        <div className="text-red-500 flex justify-center items-center h-screen">{error}</div>
-      </div>
-    )
+  const getEmbedUrl = (youtube_url) => {
+    if (!youtube_url || typeof youtube_url !== "string") return null;
+    const video_id = youtube_url.split('/').pop();
+    return `https://www.youtube.com/embed/${video_id}`
   }
 
   return (
-    <div className="min-h-screen">
-      <Navbar />
-      <div className="p-6 max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-
-        {userData && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-2xl font-semibold mb-4">Basic Profile</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="font-medium">Username: <span className="font-normal">{userData.username}</span></p>
-                <p className="font-medium">Email: <span className="font-normal">{userData.email}</span></p>
-                <p className="font-medium">Full Name: <span className="font-normal">{userData.first_name} {userData.last_name}</span></p>
-              </div>
-              <div>
-                <p className="font-medium">Age: <span className="font-normal">{userData.age || 'Not specified'}</span></p>
-                <p className="font-medium">Occupation: <span className="font-normal">{userData.occupation || 'Not specified'}</span></p>
-                <p className="font-medium">About Me: <span className="font-normal">{userData.about_me || 'Not specified'}</span></p>
+    <div className={styles.container}>
+      <div className={styles.innerContainer}>
+        <div className={styles.dashboard}>
+          {userData && (
+            <div className={styles.dashboardTitle}>
+              <h1>Dashboard {userData.username}</h1>
+              <div className={styles.actions}>
+                <Link href="/profile">
+                  <button className='btn btn-secondary'>View Profile</button>
+                </Link>
+                <Link href="/profile/setup">
+                  <button className='btn btn-primary'>Setup Profile</button>
+                </Link>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {physicalData && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-2xl font-semibold mb-4">Physical Profile</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="font-medium">Height: <span className="font-normal">{physicalData.height} cm</span></p>
-                <p className="font-medium">Weight: <span className="font-normal">{physicalData.weight} kg</span></p>
-                <p className="font-medium">Gender: <span className="font-normal">{physicalData.gender}</span></p>
-              </div>
-              <div>
-                <p className="font-medium">Body Fat: <span className="font-normal">{physicalData.body_fat || 'Not specified'}%</span></p>
-                <p className="font-medium">Muscle Mass: <span className="font-normal">{physicalData.body_mass ? `${physicalData.body_mass} kg` : 'Not specified'}</span></p>
-                <p className="font-medium">Health Condition: <span className="font-normal">{physicalData.health_condition || 'Not specified'}</span></p>
-              </div>
+          <div className={styles.dashboardContent}>
+            <h2>Welcome to your Fitness Dashboard</h2>
+            <p>Here you can get recommendations, and chat with our AI assistant.</p>
+            <button className='btn btn-primary' onClick={handleRecommendBotton}>Recommend me</button>
+            {loading ? 'loading recommendations...' : ""}
+            <div>
+              {recommendations?.detailedWeeklySchedule &&
+                Object.entries(recommendations.detailedWeeklySchedule).map(([day, data], index) => (
+                  <div key={index} className={styles.dayTable}>
+                    <h3 className={styles.dayTitle}>{day.charAt(0).toUpperCase() + day.slice(1)}</h3>
+                    <p><strong>Focus:</strong> {data.focus}</p>
+                    <p>{data.description}</p>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Exercise</th>
+                          <th>Sets</th>
+                          <th>Reps</th>
+                          <th>Intensity</th>
+                          <th>Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.exercises?.map((item, i) => (
+                          <tr key={i}>
+                            <td>{item.name}</td>
+                            <td>{item.sets}</td>
+                            <td>{item.reps}</td>
+                            <td>{item.intensity}</td>
+                            <td>{item.notes}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className={styles.cardioSection}>
+                      <div><h4>Cardio</h4></div>
+                      <hr className='line' />
+                      <div><strong>Type:</strong> {data.cardio.type}</div>
+                      <div><strong>Duration:</strong> {data.cardio.duration}</div>
+                      <div><strong>Intensity:</strong> {data.cardio.intensity}</div>
+                      <div><strong>Notes:</strong> {data.cardio.notes}</div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+            <hr className='line' />
+            <h1 className='gradient-text'>Workout Recommendations</h1>
+            <div className={styles.recBox}>
+              {recommendations?.workoutRecommendations.map((item, index) => (
+                <div key={index} className={styles.workoutRecommendationsContainer}>
+                  <div className='recommend-header'><h3>{item.category}</h3><span><span className='badge-light'>{item.duration}</span><span className='badge-light'>{item.frequency}</span></span></div>
+                  <div className='form-label text'>{item.description}</div>
+                  {item.focus && <div className='form-label text text-small'><hr className='line' /><span className='badge'>focus</span> : {item.focus}</div>}
+                  {item.intensity && <div className='form-label text text-small'><hr className='line' /><span className='badge'>intensity</span> : {item.intensity}</div>}
+                </div>
+              ))}
+            </div>
+            <hr className='line' />
+            <h1 className='gradient-text'>Nutrition Recommendations</h1>
+            <div className={styles.recBox}>
+              {recommendations?.nutritionRecommendations.map((item, index) => (
+                <div key={index} className={styles.workoutRecommendationsContainer}>
+                  <div className='recommend-header'><h3>{item.category}</h3></div>
+                  <div className='form-label text'>{item.recommendation}</div>
+                  <hr className='line' />
+                  <div className='form-label text text-small'><span className='badge'>reason</span> : {item.reasoning}</div>
+                </div>
+              ))}
+            </div>
+            <hr className='line' />
+            <h1 className='gradient-text'>Lifestyle Recommendations</h1>
+            <div className={styles.recBox}>
+              {recommendations?.lifestyleRecommendations.map((item, index) => (
+                <div key={index} className={styles.workoutRecommendationsContainer}>
+                  <div className='recommend-header'><h3>{item.category}</h3></div>
+                  <div className='form-label text'>{item.recommendation}</div>
+                  <hr className='line' />
+                  <div className='form-label text text-small'><span className='badge'>reason</span> : {item.reasoning}</div>
+                </div>
+              ))}
             </div>
           </div>
-        )}
+        </div>
+      </div>
 
-        {fitnessData && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-2xl font-semibold mb-4">Fitness Profile</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="font-medium">Fitness Level: <span className="font-normal">{fitnessData.fitness_level_display}</span></p>
-                <p className="font-medium">Workout Frequency: <span className="font-normal">{fitnessData.workout_frequency} times per week</span></p>
-                <p className="font-medium">Workout Duration: <span className="font-normal">{fitnessData.workout_duration} minutes</span></p>
-                <p className="font-medium">Workout Intensity: <span className="font-normal">{fitnessData.workout_intensity}/10</span></p>
-              </div>
-              <div>
-                <p className="font-medium">Workout Type: <span className="font-normal">{fitnessData.workout_type}</span></p>
-                <p className="font-medium">Workout Goal: <span className="font-normal">{fitnessData.workout_goal}</span></p>
-                <p className="font-medium">Health Goal: <span className="font-normal">{fitnessData.health_goal}</span></p>
-                <p className="font-medium">Equipment: <span className="font-normal">{fitnessData.workout_equipment || 'Not specified'}</span></p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {dietaryData && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-semibold mb-4">Dietary Profile</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="font-medium">Diet Preference: <span className="font-normal">{dietaryData.diet_preference || 'Not specified'}</span></p>
-                <p className="font-medium">Diet Goal: <span className="font-normal">{dietaryData.diet_goal}</span></p>
-              </div>
-              <div>
-                <p className="font-medium">Allergies: <span className="font-normal">{dietaryData.diet_allergies || 'None'}</span></p>
-                <p className="font-medium">Restrictions: <span className="font-normal">{dietaryData.diet_restrictions || 'None'}</span></p>
-                <p className="font-medium">Food Preferences: <span className="font-normal">{dietaryData.diet_preferences || 'Not specified'}</span></p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {(!physicalData || !fitnessData || !dietaryData) && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-6">
-            <h3 className="text-lg font-medium text-yellow-700 mb-2">Complete Your Profile</h3>
-            <p className="text-yellow-600">
-              Some of your profile information is missing. Please complete your profile to get personalized recommendations.
-            </p>
+      <div className={styles.chatSection}>
+        <h3>Chat with FitFusion AI</h3>
+        <form onSubmit={onSubmitChat}>
+          <div className={styles.chatInput}>
+            <input
+              type='text'
+              className='form-input'
+              placeholder="Ask about fitness, nutrition, or workout plans..."
+              onChange={(e) => { setChat(e.target.value) }}
+              value={chat}
+              disabled={isStreaming}
+            />
             <button
-              onClick={handleCompleteProfile}
-              disabled={navigating}
-              className="mt-4 bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded-md transition-colors disabled:opacity-50"
+              type='submit'
+              className='btn btn-primary'
+              disabled={isStreaming}
             >
-              {navigating ? 'Navigating...' : 'Complete Profile'}
+              {isStreaming ? 'Getting response...' : 'Ask'}
             </button>
           </div>
-        )}
+        </form>
+        <div className={styles.askContainer}>
+          <div className={styles.chatResponse}>
+            {chatResponse && (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code({ node, inline, className, children, ...props }) {
+                    const match = /language-(\w+)/.exec(className || '')
+                    return !inline && match ? (
+                      <SyntaxHighlighter
+                        style={tomorrow}
+                        language={match[1]}
+                        PreTag="div"
+                        {...props}
+                      >
+                        {String(children).replace(/\n$/, '')}
+                      </SyntaxHighlighter>
+                    ) : (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    )
+                  },
+                  a: ({ node, ...props }) => (
+                    <a target="_blank" rel="noopener noreferrer" {...props} />
+                  )
+                }}
+              >
+                {chatResponse}
+              </ReactMarkdown>
+            )}
+          </div>
+          <div>
+            {loading ? 'searching' : (clicked && (
+              <div className='gradient-text' style={{ marginTop: "1rem" }}><h1>Are you looking for these?</h1></div>
+            ))}
+            {search.map((item, index) => (
+              <div key={index} className={styles.videoContentBox}>
+                <div className='gradient-text'><h3>{item.metadata?.title}</h3></div>
+                <div className='form-label text'>{item.metadata?.description}</div>
+                <iframe width="100%" height="300px"
+                  className={styles.video}
+                  src={getEmbedUrl(item.metadata?.youtube_url)}
+                  title="YouTube Shorts video"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen>
+                </iframe>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-      <div>test</div>
-      <form onSubmit={onSubmitChat}>
-        <label>query text</label>
-        <input type='text' onChange={(e) => { setChat(e.target.value) }} value={chat} />
-        <input type='submit' />
-      </form>
-      <div>
-        {chatResponse}
-      </div>
-    </div>
+    </div >
   )
 } 

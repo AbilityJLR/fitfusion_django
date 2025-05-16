@@ -1,0 +1,14 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid red;
+  width: 100vw;
+  height: 100vh;
+}
+
+.inner_container {
+  background-color: var(--card-bg);
+  padding: 2rem;
+  border-radius: 1rem;
+}

@@ -43,7 +43,7 @@ from llm.views import (
 urlpatterns = [
     path("admin/", admin.site.urls),
     # NOTE: USER AUTH ENDPOINTS
-    path("api/register/", RegisterView, name="register"),
+    path("api/register/", RegisterView.as_view(), name="register"),
     path("api/token/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", CustomTokenRefreshView.as_view(), name="token_refresh"),
     path("api/logout/", logout_view, name="logout"),

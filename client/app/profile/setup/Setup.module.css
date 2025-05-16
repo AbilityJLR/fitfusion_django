@@ -1,0 +1,27 @@
+.container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.innerContainer {
+  width: 80vw;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  background-color: var(--card-bg);
+}
+
+.innerContainer h2, .innerContainer h3 {
+  background: var(--gradient-color);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.contentContainer{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 15px;
+}

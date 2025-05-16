@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { setupProfiles } from '../utils/profile';
+import styles from '../profile/setup/Setup.module.css'
+import '../style.css'
 
 export default function ProfileSetupForm({ onSubmitStart, onSubmitEnd, onSubmitSuccess, submitting, initialData }) {
   const [formData, setFormData] = useState({
@@ -16,8 +18,8 @@ export default function ProfileSetupForm({ onSubmitStart, onSubmitEnd, onSubmitS
       height: 0,
       weight: 0,
       gender: '',
-      body_fat: null,
-      body_mass: null,
+      body_fat: '',
+      body_mass: '',
       health_condition: '',
     },
     fitness_profile: {
@@ -42,24 +44,37 @@ export default function ProfileSetupForm({ onSubmitStart, onSubmitEnd, onSubmitS
 
   useEffect(() => {
     if (initialData) {
-      setFormData({
+      const processedData = {
         user_profile: {
           ...formData.user_profile,
-          ...initialData.user_profile
+          ...initialData.user_profile,
+          age: initialData.user_profile?.age ?? 0,
         },
         physical_profile: {
           ...formData.physical_profile,
-          ...initialData.physical_profile
+          ...initialData.physical_profile,
+          height: initialData.physical_profile?.height ?? 0,
+          weight: initialData.physical_profile?.weight ?? 0,
+          body_fat: initialData.physical_profile?.body_fat ?? '',
+          body_mass: initialData.physical_profile?.body_mass ?? '',
+          gender: initialData.physical_profile?.gender ?? '',
+          health_condition: initialData.physical_profile?.health_condition ?? '',
         },
         fitness_profile: {
           ...formData.fitness_profile,
-          ...initialData.fitness_profile
+          ...initialData.fitness_profile,
+          fitness_level: initialData.fitness_profile?.fitness_level ?? 1,
+          workout_frequency: initialData.fitness_profile?.workout_frequency ?? 0,
+          workout_duration: initialData.fitness_profile?.workout_duration ?? 0,
+          workout_intensity: initialData.fitness_profile?.workout_intensity ?? 0,
         },
         dietary_profile: {
           ...formData.dietary_profile,
-          ...initialData.dietary_profile
+          ...initialData.dietary_profile,
         }
-      });
+      };
+
+      setFormData(processedData);
     }
   }, [initialData]);
 
@@ -81,14 +96,36 @@ export default function ProfileSetupForm({ onSubmitStart, onSubmitEnd, onSubmitS
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
+
     if (onSubmitStart) onSubmitStart();
-    
+
     try {
-      const response = await setupProfiles(formData);
+      const processedData = {
+        user_profile: {
+          ...formData.user_profile,
+          age: formData.user_profile.age ? parseInt(formData.user_profile.age) : 0,
+        },
+        physical_profile: {
+          ...formData.physical_profile,
+          height: formData.physical_profile.height ? parseInt(formData.physical_profile.height) : 0,
+          weight: formData.physical_profile.weight ? parseInt(formData.physical_profile.weight) : 0,
+          body_fat: formData.physical_profile.body_fat !== '' ? parseInt(formData.physical_profile.body_fat) : null,
+          body_mass: formData.physical_profile.body_mass !== '' ? parseInt(formData.physical_profile.body_mass) : null,
+        },
+        fitness_profile: {
+          ...formData.fitness_profile,
+          fitness_level: formData.fitness_profile.fitness_level ? parseInt(formData.fitness_profile.fitness_level) : 1,
+          workout_frequency: formData.fitness_profile.workout_frequency ? parseInt(formData.fitness_profile.workout_frequency) : 0,
+          workout_duration: formData.fitness_profile.workout_duration ? parseInt(formData.fitness_profile.workout_duration) : 0,
+          workout_intensity: formData.fitness_profile.workout_intensity ? parseInt(formData.fitness_profile.workout_intensity) : 0,
+        },
+        dietary_profile: formData.dietary_profile,
+      };
+
+      const response = await setupProfiles(processedData);
       setSuccess(true);
       console.log('Profile setup successful:', response);
-      
+
       if (onSubmitSuccess) onSubmitSuccess();
     } catch (err) {
       setError(err.response?.data || 'An error occurred during profile setup');
@@ -102,101 +139,103 @@ export default function ProfileSetupForm({ onSubmitStart, onSubmitEnd, onSubmitS
   const isSubmitting = submitting !== undefined ? submitting : loading;
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6">Complete Your Profile</h2>
-      
+    <div className={styles.innerContainer}>
+      <h2>Complete Your Profile</h2>
+
       {success && (
-        <div className="bg-green-100 text-green-700 p-4 mb-6 rounded">
+        <div>
           Your profile has been set up successfully!
         </div>
       )}
-      
+
       {error && (
-        <div className="bg-red-100 text-red-700 p-4 mb-6 rounded">
+        <div>
           {typeof error === 'string' ? error : 'An error occurred during setup'}
         </div>
       )}
-      
+
       <form onSubmit={handleSubmit}>
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold mb-4">Basic Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section>
+          <h3>Basic Information</h3>
+          <div className={styles.contentContainer}>
             <div>
-              <label className="block mb-1">First Name</label>
+              <label className='form-label'>First Name</label>
               <input
+                className='form-input'
                 type="text"
-                value={formData.user_profile.first_name}
+                value={formData.user_profile.first_name || ''}
                 onChange={(e) => handleChange('user_profile', 'first_name', e.target.value)}
-                className="w-full p-2 border rounded"
               />
             </div>
             <div>
-              <label className="block mb-1">Last Name</label>
+              <label className='form-label'>Last Name</label>
               <input
+                className='form-input'
                 type="text"
-                value={formData.user_profile.last_name}
+                value={formData.user_profile.last_name || ''}
                 onChange={(e) => handleChange('user_profile', 'last_name', e.target.value)}
-                className="w-full p-2 border rounded"
               />
             </div>
             <div>
-              <label className="block mb-1">Age</label>
+              <label className='form-label'>Age</label>
               <input
+                className='form-input'
                 type="number"
-                value={formData.user_profile.age}
-                onChange={(e) => handleChange('user_profile', 'age', Number(e.target.value))}
-                className="w-full p-2 border rounded"
+                value={formData.user_profile.age || 0}
+                onChange={(e) => handleChange('user_profile', 'age', Number(e.target.value) || 0)}
               />
             </div>
             <div>
-              <label className="block mb-1">Occupation</label>
+              <label className='form-label'>Occupation</label>
               <input
+                className='form-input'
                 type="text"
-                value={formData.user_profile.occupation}
+                value={formData.user_profile.occupation || ''}
                 onChange={(e) => handleChange('user_profile', 'occupation', e.target.value)}
-                className="w-full p-2 border rounded"
               />
             </div>
-            <div className="md:col-span-2">
-              <label className="block mb-1">About Me</label>
+            <div>
+              <label className="form-label">About Me</label>
               <textarea
+                className='form-input'
                 rows="3"
-                value={formData.user_profile.about_me}
+                value={formData.user_profile.about_me || ''}
                 onChange={(e) => handleChange('user_profile', 'about_me', e.target.value)}
-                className="w-full p-2 border rounded"
                 placeholder="Tell us a bit about yourself"
               />
             </div>
           </div>
         </section>
-        
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold mb-4">Physical Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <hr className='line' />
+
+        <section>
+          <h3>Physical Information</h3>
+          <div className={styles.contentContainer}>
             <div>
-              <label className="block mb-1">Height (cm)</label>
+              <label className='form-label'>Height (cm)</label>
               <input
+                className='form-input'
                 type="number"
-                value={formData.physical_profile.height}
-                onChange={(e) => handleChange('physical_profile', 'height', Number(e.target.value))}
-                className="w-full p-2 border rounded"
+                value={formData.physical_profile.height || 0}
+                onChange={(e) => handleChange('physical_profile', 'height', Number(e.target.value) || 0)}
               />
             </div>
             <div>
-              <label className="block mb-1">Weight (kg)</label>
+              <label className='form-label'>Weight (kg)</label>
               <input
+                className='form-input'
                 type="number"
-                value={formData.physical_profile.weight}
-                onChange={(e) => handleChange('physical_profile', 'weight', Number(e.target.value))}
-                className="w-full p-2 border rounded"
+                value={formData.physical_profile.weight || 0}
+                onChange={(e) => handleChange('physical_profile', 'weight', Number(e.target.value) || 0)}
               />
             </div>
             <div>
-              <label className="block mb-1">Gender</label>
+              <label className='form-label'>Gender</label>
               <select
-                value={formData.physical_profile.gender}
+                className='form-input'
+                value={formData.physical_profile.gender || ''}
                 onChange={(e) => handleChange('physical_profile', 'gender', e.target.value)}
-                className="w-full p-2 border rounded"
               >
                 <option value="">Select Gender</option>
                 <option value="male">Male</option>
@@ -205,47 +244,55 @@ export default function ProfileSetupForm({ onSubmitStart, onSubmitEnd, onSubmitS
               </select>
             </div>
             <div>
-              <label className="block mb-1">Body Fat (%)</label>
+              <label className='form-label'>Body Fat (%)</label>
               <input
+                className='form-input'
                 type="number"
                 value={formData.physical_profile.body_fat || ''}
-                onChange={(e) => handleChange('physical_profile', 'body_fat', e.target.value ? Number(e.target.value) : null)}
-                className="w-full p-2 border rounded"
+                onChange={(e) => {
+                  const value = e.target.value.trim() === '' ? '' : e.target.value;
+                  handleChange('physical_profile', 'body_fat', value);
+                }}
                 placeholder="Optional"
               />
             </div>
             <div>
-              <label className="block mb-1">Muscle Mass (kg)</label>
+              <label className='form-label'>Muscle Mass (kg)</label>
               <input
+                className='form-input'
                 type="number"
                 value={formData.physical_profile.body_mass || ''}
-                onChange={(e) => handleChange('physical_profile', 'body_mass', e.target.value ? Number(e.target.value) : null)}
-                className="w-full p-2 border rounded"
+                onChange={(e) => {
+                  const value = e.target.value.trim() === '' ? '' : e.target.value;
+                  handleChange('physical_profile', 'body_mass', value);
+                }}
                 placeholder="Estimated skeletal muscle mass"
               />
             </div>
             <div>
-              <label className="block mb-1">Health Condition</label>
+              <label className="form-label">Health Condition</label>
               <input
+                className='form-input'
                 type="text"
-                value={formData.physical_profile.health_condition}
+                value={formData.physical_profile.health_condition || ''}
                 onChange={(e) => handleChange('physical_profile', 'health_condition', e.target.value)}
-                className="w-full p-2 border rounded"
                 placeholder="Any health conditions or concerns"
               />
             </div>
           </div>
         </section>
-        
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold mb-4">Fitness Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <hr className='line' />
+
+        <section>
+          <h3>Fitness Information</h3>
+          <div className={styles.contentContainer}>
             <div>
-              <label className="block mb-1">Fitness Level</label>
+              <label className='form-label'>Fitness Level</label>
               <select
-                value={formData.fitness_profile.fitness_level}
-                onChange={(e) => handleChange('fitness_profile', 'fitness_level', Number(e.target.value))}
-                className="w-full p-2 border rounded"
+                className='form-input'
+                value={formData.fitness_profile.fitness_level || 1}
+                onChange={(e) => handleChange('fitness_profile', 'fitness_level', Number(e.target.value) || 1)}
               >
                 <option value={1}>Beginner</option>
                 <option value={2}>Intermediate</option>
@@ -255,43 +302,43 @@ export default function ProfileSetupForm({ onSubmitStart, onSubmitEnd, onSubmitS
               </select>
             </div>
             <div>
-              <label className="block mb-1">Workout Frequency (per week)</label>
+              <label className='form-label'>Workout Frequency (per week)</label>
               <input
+                className='form-input'
                 type="number"
-                value={formData.fitness_profile.workout_frequency}
-                onChange={(e) => handleChange('fitness_profile', 'workout_frequency', Number(e.target.value))}
-                className="w-full p-2 border rounded"
+                value={formData.fitness_profile.workout_frequency || 0}
+                onChange={(e) => handleChange('fitness_profile', 'workout_frequency', Number(e.target.value) || 0)}
               />
             </div>
             <div>
-              <label className="block mb-1">Workout Duration (minutes)</label>
+              <label className='form-label'>Workout Duration (minutes)</label>
               <input
+                className='form-input'
                 type="number"
-                value={formData.fitness_profile.workout_duration}
-                onChange={(e) => handleChange('fitness_profile', 'workout_duration', Number(e.target.value))}
-                className="w-full p-2 border rounded"
+                value={formData.fitness_profile.workout_duration || 0}
+                onChange={(e) => handleChange('fitness_profile', 'workout_duration', Number(e.target.value) || 0)}
               />
             </div>
             <div>
-              <label className="block mb-1">Workout Intensity (1-10)</label>
-              <div className="flex items-center gap-2">
+              <label className='form-label'>Workout Intensity (1-10)</label>
+              <div>
                 <input
+                  className='form-range'
                   type="range"
                   min="1"
                   max="10"
-                  value={formData.fitness_profile.workout_intensity}
-                  onChange={(e) => handleChange('fitness_profile', 'workout_intensity', Number(e.target.value))}
-                  className="w-full"
+                  value={formData.fitness_profile.workout_intensity || 1}
+                  onChange={(e) => handleChange('fitness_profile', 'workout_intensity', Number(e.target.value) || 1)}
                 />
-                <span className="text-sm font-medium">{formData.fitness_profile.workout_intensity}</span>
+                <div className='form-range-text'>{formData.fitness_profile.workout_intensity || 1}</div>
               </div>
             </div>
             <div>
-              <label className="block mb-1">Workout Type</label>
+              <label className='form-label'>Workout Type</label>
               <select
-                value={formData.fitness_profile.workout_type}
+                className='form-input'
+                value={formData.fitness_profile.workout_type || ''}
                 onChange={(e) => handleChange('fitness_profile', 'workout_type', e.target.value)}
-                className="w-full p-2 border rounded"
               >
                 <option value="">Select Type</option>
                 <option value="cardio">Cardio</option>
@@ -302,31 +349,31 @@ export default function ProfileSetupForm({ onSubmitStart, onSubmitEnd, onSubmitS
               </select>
             </div>
             <div>
-              <label className="block mb-1">Equipment Used</label>
+              <label className='form-label'>Equipment Used</label>
               <input
+                className='form-input'
                 type="text"
-                value={formData.fitness_profile.workout_equipment}
+                value={formData.fitness_profile.workout_equipment || ''}
                 onChange={(e) => handleChange('fitness_profile', 'workout_equipment', e.target.value)}
-                className="w-full p-2 border rounded"
                 placeholder="e.g., dumbbells, treadmill, etc."
               />
             </div>
             <div>
-              <label className="block mb-1">Workout Style</label>
+              <label className='form-label'>Workout Style</label>
               <input
+                className='form-input'
                 type="text"
-                value={formData.fitness_profile.workout_style}
+                value={formData.fitness_profile.workout_style || ''}
                 onChange={(e) => handleChange('fitness_profile', 'workout_style', e.target.value)}
-                className="w-full p-2 border rounded"
                 placeholder="e.g., CrossFit, bodybuilding, etc."
               />
             </div>
             <div>
-              <label className="block mb-1">Workout Goal</label>
+              <label className='form-label'>Workout Goal</label>
               <select
-                value={formData.fitness_profile.workout_goal}
+                className='form-input'
+                value={formData.fitness_profile.workout_goal || ''}
                 onChange={(e) => handleChange('fitness_profile', 'workout_goal', e.target.value)}
-                className="w-full p-2 border rounded"
               >
                 <option value="">Select Goal</option>
                 <option value="weight_loss">Weight Loss</option>
@@ -337,27 +384,29 @@ export default function ProfileSetupForm({ onSubmitStart, onSubmitEnd, onSubmitS
               </select>
             </div>
             <div>
-              <label className="block mb-1">Health Goal</label>
+              <label className='form-label'>Health Goal</label>
               <input
+                className='form-input'
                 type="text"
-                value={formData.fitness_profile.health_goal}
+                value={formData.fitness_profile.health_goal || ''}
                 onChange={(e) => handleChange('fitness_profile', 'health_goal', e.target.value)}
-                className="w-full p-2 border rounded"
                 placeholder="Your overall health goal"
               />
             </div>
           </div>
         </section>
-        
-        <section className="mb-8">
-          <h3 className="text-xl font-semibold mb-4">Dietary Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <hr className='line' />
+
+        <section>
+          <h3>Dietary Information</h3>
+          <div className={styles.contentContainer}>
             <div>
-              <label className="block mb-1">Diet Preference</label>
+              <label className='form-label'>Diet Preference</label>
               <select
-                value={formData.dietary_profile.diet_preference}
+                className='form-input'
+                value={formData.dietary_profile.diet_preference || ''}
                 onChange={(e) => handleChange('dietary_profile', 'diet_preference', e.target.value)}
-                className="w-full p-2 border rounded"
               >
                 <option value="">Select Preference</option>
                 <option value="omnivore">Omnivore</option>
@@ -369,11 +418,11 @@ export default function ProfileSetupForm({ onSubmitStart, onSubmitEnd, onSubmitS
               </select>
             </div>
             <div>
-              <label className="block mb-1">Diet Goal</label>
+              <label className='form-label'>Diet Goal</label>
               <select
-                value={formData.dietary_profile.diet_goal}
+                className='form-input'
+                value={formData.dietary_profile.diet_goal || ''}
                 onChange={(e) => handleChange('dietary_profile', 'diet_goal', e.target.value)}
-                className="w-full p-2 border rounded"
               >
                 <option value="">Select Goal</option>
                 <option value="weight_loss">Weight Loss</option>
@@ -383,42 +432,44 @@ export default function ProfileSetupForm({ onSubmitStart, onSubmitEnd, onSubmitS
               </select>
             </div>
             <div>
-              <label className="block mb-1">Allergies</label>
+              <label className='form-label'>Allergies</label>
               <input
+                className='form-input'
                 type="text"
-                value={formData.dietary_profile.diet_allergies}
+                value={formData.dietary_profile.diet_allergies || ''}
                 onChange={(e) => handleChange('dietary_profile', 'diet_allergies', e.target.value)}
-                className="w-full p-2 border rounded"
                 placeholder="e.g., nuts, dairy, seafood"
               />
             </div>
             <div>
-              <label className="block mb-1">Dietary Restrictions</label>
+              <label className='form-label'>Dietary Restrictions</label>
               <input
+                className='form-input'
                 type="text"
-                value={formData.dietary_profile.diet_restrictions}
+                value={formData.dietary_profile.diet_restrictions || ''}
                 onChange={(e) => handleChange('dietary_profile', 'diet_restrictions', e.target.value)}
-                className="w-full p-2 border rounded"
                 placeholder="e.g., gluten-free, low carb"
               />
             </div>
             <div>
-              <label className="block mb-1">Food Preferences</label>
+              <label className='form-label'>Food Preferences</label>
               <input
+                className='form-input'
                 type="text"
-                value={formData.dietary_profile.diet_preferences}
+                value={formData.dietary_profile.diet_preferences || ''}
                 onChange={(e) => handleChange('dietary_profile', 'diet_preferences', e.target.value)}
-                className="w-full p-2 border rounded"
                 placeholder="Foods you particularly enjoy"
               />
             </div>
           </div>
         </section>
-        
-        <div className="mt-6">
+
+        <hr className='line' />
+
+        <div>
           <button
+            className='btn btn-primary'
             type="submit"
-            className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50"
             disabled={isSubmitting || success}
           >
             {isSubmitting ? 'Saving Profile...' : success ? 'Profile Saved!' : 'Save Profile'}

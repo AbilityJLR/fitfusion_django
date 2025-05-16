@@ -1,0 +1,81 @@
+.container {
+  width: 100%;
+  margin: 0 auto;
+}
+
+.innerContainer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+}
+
+.profile {
+  width: 70%;
+  background: var(--card-bg);
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.profileTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.profile h1, .profile h2, .profile h3 {
+  display: inline-block;
+  background: var(--gradient-color);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.basicProfile, .profileSection {
+  background-color: var(--bg-color);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.profileGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.profileGrid p {
+  margin-bottom: 0.75rem;
+  color: var(--text-light);
+}
+
+.profileGrid p span {
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.completeProfile {
+  background-color: var(--bg-color);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  text-align: center;
+}
+
+.completeProfile p {
+  margin: 1rem 0;
+}
+
+@media (max-width: 768px) {
+  .profile {
+    width: 90%;
+  }
+  
+  .profileGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+} 

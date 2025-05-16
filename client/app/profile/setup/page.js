@@ -5,6 +5,7 @@ import ProfileSetupForm from '../../components/ProfileSetupForm';
 import { useAuth } from '../../components/AuthProvider';
 import Navbar from '../../components/Navbar';
 import { getProfileSetupData } from '../../utils/profile';
+import styles from './Setup.module.css'
 
 export default function ProfileSetupPage() {
   const router = useRouter();
@@ -16,9 +17,9 @@ export default function ProfileSetupPage() {
   useEffect(() => {
     const fetchProfileData = async () => {
       if (!isAuthenticated || isLoading) return;
-      
+
       setDataLoading(true);
-      
+
       try {
         const profileData = await getProfileSetupData();
         setInitialData(profileData);
@@ -38,17 +39,6 @@ export default function ProfileSetupPage() {
     fetchProfileData();
   }, [isAuthenticated, isLoading]);
 
-  if (isLoading || dataLoading) {
-    return (
-      <div className="min-h-screen">
-        <Navbar />
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      </div>
-    );
-  }
-
   if (!isAuthenticated) {
     return null;
   }
@@ -60,17 +50,19 @@ export default function ProfileSetupPage() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div>
       <Navbar />
-      <div className="container mx-auto py-10 px-4">
-        <h1 className="text-3xl font-bold text-center mb-10">Setup Your Profile</h1>
-        <ProfileSetupForm 
-          onSubmitStart={() => setSubmitting(true)}
-          onSubmitEnd={() => setSubmitting(false)}
-          onSubmitSuccess={handleSubmitSuccess}
-          submitting={submitting}
-          initialData={initialData}
-        />
+      <div className={styles.container}>
+        <div style={{ marginTop: "1rem" }}>
+          <h1 className='gradient-text'>Setup Your Profile</h1>
+          <ProfileSetupForm
+            onSubmitStart={() => setSubmitting(true)}
+            onSubmitEnd={() => setSubmitting(false)}
+            onSubmitSuccess={handleSubmitSuccess}
+            submitting={submitting}
+            initialData={initialData}
+          />
+        </div>
       </div>
     </div>
   );

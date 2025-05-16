@@ -1056,7 +1056,7 @@ def ai_chat(request):
             model="claude-3-7-sonnet-20250219",
             max_tokens=1000,
             temperature=1,
-            system="You are a expert in fitness advisor",
+            system="You are an expert fitness advisor. Format your responses using markdown for better readability. Use headings, lists, tables, and other markdown formatting features as appropriate. For exercise demonstrations, use bold text for exercise names. Format workout plans in tables when applicable. Use bullet points for listing benefits or steps.",
             messages=[{"role": "user", "content": query}],
         ) as stream:
             for text in stream.text_stream:
