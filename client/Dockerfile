@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
@@ -6,13 +6,28 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci
 
 # Copy the rest of the application
 COPY . .
 
-# Expose port for dev server
+# Build the application
+RUN npm run build
+
+# Production image
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy built application
+COPY --from=build /app/.next/standalone ./
+COPY --from=build /app/.next/static ./.next/static
+COPY --from=build /app/public ./public
+
+# Expose port
 EXPOSE 3000
 
-# Start NextJS in development mode with hot reloading
-CMD ["npm", "run", "dev"]
+# Set the command to run the production server
+CMD ["node", "server.js"]
