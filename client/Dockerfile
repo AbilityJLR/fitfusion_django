@@ -1,4 +1,4 @@
-FROM node:20-alpine AS build
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ RUN npm ci
 # Copy the rest of the application
 COPY . .
 
-# Build the application
+# Build application
 RUN npm run build
 
 # Production image
@@ -19,20 +19,21 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# Set to production environment
 ENV NODE_ENV=production
 
-# Copy necessary files for production
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/package-lock.json ./package-lock.json
-COPY --from=build /app/next.config.mjs ./next.config.mjs
-COPY --from=build /app/public ./public
-COPY --from=build /app/.next ./.next
+# Copy necessary files from builder stage
+COPY --from=builder /app/package.json .
+COPY --from=builder /app/package-lock.json .
+COPY --from=builder /app/next.config.mjs ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
 
 # Install only production dependencies
-RUN npm ci --omit=dev
+RUN npm ci --only=production
 
 # Expose port
 EXPOSE 3000
 
-# Set the command to run the production server
-CMD ["npm", "run", "start"]
+# Start Next.js in production mode
+CMD ["npm", "start"]
