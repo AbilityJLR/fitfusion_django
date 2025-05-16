@@ -38,10 +38,9 @@ export default function Register() {
         console.log("Registration successful:", result.data);
         setSuccess(true);
 
-        // Redirect to login page after successful registration
         setTimeout(() => {
           router.push('/profile/setup');
-        }, 1500); // Short delay to show success message
+        }, 1500);
       } else {
         setErrorMessage(result.error);
       }
