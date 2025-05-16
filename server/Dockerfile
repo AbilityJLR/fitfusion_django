@@ -5,6 +5,7 @@ WORKDIR /app
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV DEBUG=False
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
