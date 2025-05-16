@@ -21,13 +21,18 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy built application
-COPY --from=build /app/.next/standalone ./
-COPY --from=build /app/.next/static ./.next/static
+# Copy necessary files for production
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/package-lock.json ./package-lock.json
+COPY --from=build /app/next.config.mjs ./next.config.mjs
 COPY --from=build /app/public ./public
+COPY --from=build /app/.next ./.next
+
+# Install only production dependencies
+RUN npm ci --omit=dev
 
 # Expose port
 EXPOSE 3000
 
 # Set the command to run the production server
-CMD ["node", "server.js"]
+CMD ["npm", "run", "start"]

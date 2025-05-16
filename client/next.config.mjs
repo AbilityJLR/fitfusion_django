@@ -6,6 +6,7 @@ const nextConfig = {
     // Enable Server Actions only for server components
     serverActions: true,
   },
+  output: 'standalone',
   async headers() {
     return [
       {
