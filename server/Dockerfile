@@ -20,6 +20,9 @@ RUN pip install --no-cache-dir gunicorn
 # Copy project
 COPY . .
 
+# Create static directory
+RUN mkdir -p staticfiles
+
 # Collect static files
 RUN python manage.py collectstatic --noinput
 
