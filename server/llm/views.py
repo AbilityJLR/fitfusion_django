@@ -1,4 +1,3 @@
-import anthropic
 from rest_framework.decorators import (
     api_view,
     permission_classes,
@@ -1049,8 +1048,6 @@ def ai_chat(request):
     user = request.user
     query = request.data.get("query")
 
-    from django.http import StreamingHttpResponse
-
     def stream_response():
         with client.messages.stream(
             model="claude-3-7-sonnet-20250219",
@@ -1064,5 +1061,5 @@ def ai_chat(request):
 
     return StreamingHttpResponse(
         streaming_content=stream_response(),
-        content_type='text/plain',
+        content_type="text/plain",
     )
