@@ -1,14 +1,20 @@
 .container {
+  margin-top: 3rem;
   display: flex;
   justify-content: center;
-  align-items: center;
-  border: 1px solid red;
   width: 100vw;
-  height: 100vh;
 }
 
 .inner_container {
+  width: 50%;
   background-color: var(--card-bg);
   padding: 2rem;
   border-radius: 1rem;
+}
+
+.test{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 15px;
+  margin-top: .5rem;
 }

@@ -274,3 +274,16 @@ table, thead, tr, th, td {
   -webkit-text-fill-color: transparent;
 }
 
+a {
+  all: unset;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+a:hover {
+  all: unset;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}

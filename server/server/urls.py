@@ -32,9 +32,6 @@ from api.views import (
 
 from llm.views import (
     recommendations_view,
-    search_content_view,
-    upsert_content_view,
-    delete_content_view,
     fitness_content_search,
     fitness_content_management,
     ai_chat,
@@ -70,14 +67,6 @@ urlpatterns = [
         fitness_content_management,
         name="fitness_content_detail",
     ),
-    path("api/vector/search/", search_content_view, name="vector_search"),
-    path("api/vector/upsert/", upsert_content_view, name="vector_upsert"),
-    path(
-        "api/vector/delete/<str:embedding_id>/",
-        delete_content_view,
-        name="vector_delete",
-    ),
-    path("api/vector/delete/", delete_content_view, name="vector_delete_by_body"),
     # NOTE: AI CHAT ENDPOINTS
     path("api/chat/", ai_chat, name="ai_chat"),
 ]

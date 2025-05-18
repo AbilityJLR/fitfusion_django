@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [chatResponse, setChatResponse] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [searching, setSearching] = useState(false)
   const [userData, setUserData] = useState(null)
   const [recommendations, setRecommendations] = useState(null)
   const [error, setError] = useState(null)
@@ -71,27 +72,32 @@ export default function Dashboard() {
     setChatResponse('')
     setClicked(true)
     setIsStreaming(true)
-    setLoading(true)
+    setSearching(true);
 
-    try {
-      await getGenAI(chat, (streamText) => {
-        setChatResponse(streamText)
-      })
-    } catch (err) {
-      console.log('error', err)
-    } finally {
-      setIsStreaming(false)
-    }
+    (async () => {
 
-    try {
-      const searchResults = await getSearch(chat)
-      console.log(searchResults)
-      setSearch(searchResults)
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setLoading(false)
-    }
+      try {
+        await getGenAI(chat, (streamText) => {
+          setChatResponse(streamText)
+        })
+      } catch (err) {
+        console.log('error', err)
+      } finally {
+        setIsStreaming(false)
+      }
+    })();
+
+    (async () => {
+      try {
+        const searchResults = await getSearch(chat)
+        console.log(searchResults)
+        setSearch(searchResults)
+      } catch (error) {
+        console.error(error)
+      } finally {
+        setSearching(false)
+      }
+    })();
   }
 
   const handleRecommendBotton = async () => {
@@ -269,7 +275,7 @@ export default function Dashboard() {
             )}
           </div>
           <div>
-            {loading ? 'searching' : (clicked && (
+            {searching ? 'searching...' : (clicked && (
               <div className='gradient-text' style={{ marginTop: "1rem" }}><h1>Are you looking for these?</h1></div>
             ))}
             {search.map((item, index) => (

@@ -37,7 +37,6 @@
   width: 30vw;
   height: 30vw;
   background: radial-gradient(circle, var(--primary-color) 0%, transparent 70%);
-  animation: float 25s infinite alternate ease-in-out;
 }
 
 .circle2 {
@@ -46,7 +45,6 @@
   width: 25vw;
   height: 25vw;
   background: radial-gradient(circle, var(--primary-hover) 0%, transparent 70%);
-  animation: float 20s infinite alternate-reverse ease-in-out;
 }
 
 .gridPattern {
