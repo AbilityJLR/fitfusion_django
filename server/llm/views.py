@@ -1,4 +1,3 @@
-import anthropic
 from rest_framework.decorators import (
     api_view,
     permission_classes,
@@ -41,7 +40,6 @@ _embedding_model = None
 
 
 def init_pinecone():
-    """Initialize the Pinecone client and index"""
     global _pinecone_client, _pinecone_index
 
     if not PINECONE_API_KEY:
@@ -74,7 +72,6 @@ def init_pinecone():
 
 
 def get_embedding_model():
-    """Get or initialize the embedding model"""
     global _embedding_model
 
     if _embedding_model is None:
@@ -85,7 +82,6 @@ def get_embedding_model():
 
 
 def get_embedding(text):
-    """Get embedding for text using the model"""
     if not text:
         raise ValueError("Text cannot be empty")
 
@@ -94,7 +90,6 @@ def get_embedding(text):
 
 
 def upsert_fitness_content(fitness_content):
-    """Upsert fitness content embedding to Pinecone"""
     if (
         not fitness_content
         or not hasattr(fitness_content, "title")
@@ -148,7 +143,6 @@ def upsert_fitness_content(fitness_content):
 def search_fitness_content(
     query_text, content_type=None, difficulty_level=None, filter_dict=None, top_k=5
 ):
-    """Search fitness content in Pinecone"""
     if not query_text:
         raise ValueError("Query text cannot be empty")
 
@@ -197,24 +191,6 @@ def delete_embedding(embedding_id):
     except Exception as e:
         logger.error(f"Error deleting from Pinecone: {str(e)}")
         raise
-
-
-def bulk_delete_embeddings(embedding_ids):
-    if not embedding_ids:
-        return
-
-    if _pinecone_index is None:
-        init_pinecone()
-
-    batch_size = 100
-    for i in range(0, len(embedding_ids), batch_size):
-        batch = embedding_ids[i : i + batch_size]
-        try:
-            _pinecone_index.delete(ids=batch)
-            logger.info(f"Deleted batch of {len(batch)} embeddings from Pinecone")
-        except Exception as e:
-            logger.error(f"Error deleting batch from Pinecone: {str(e)}")
-            raise
 
 
 init_pinecone()
@@ -774,107 +750,6 @@ IMPORTANT:Your response must be ONLY valid JSON that follows the requested struc
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-@authentication_classes([CookieJWTAuthentication])
-def search_content_view(request):
-    try:
-        data = request.data
-        query = data.get("query", "")
-
-        if not query:
-            return Response(
-                {"error": "Query parameter is required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        content_type = data.get("content_type", None)
-        difficulty_level = data.get("difficulty_level", None)
-        filter_dict = data.get("filters", {})
-        top_k = data.get("limit", 5)
-
-        results = search_fitness_content(
-            query_text=query,
-            content_type=content_type,
-            difficulty_level=difficulty_level,
-            filter_dict=filter_dict,
-            top_k=top_k,
-        )
-
-        return Response(results)
-
-    except Exception as e:
-        logger.error(f"Error searching content: {str(e)}")
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-@authentication_classes([CookieJWTAuthentication])
-def upsert_content_view(request):
-    try:
-        data = request.data
-
-        if not data.get("title"):
-            return Response(
-                {"error": "Title is required"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if not data.get("content_type"):
-            return Response(
-                {"error": "Content type is required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        class FitnessContent:
-            pass
-
-        content = FitnessContent()
-        content.title = data.get("title")
-        content.description = data.get("description", "")
-        content.content_type = data.get("content_type")
-        content.embedding_id = data.get("embedding_id", None)
-        content.difficulty_level = data.get("difficulty_level", 2)
-        content.url = data.get("url", "")
-        content.youtube_url = data.get("youtube_url", "")
-        content.equipment_required = data.get("equipment_required", "")
-        content.duration_minutes = data.get("duration_minutes", 0)
-        content.calories_burned = data.get("calories_burned", 0)
-        content.target_muscles = data.get("target_muscles", "")
-
-        embedding_id = upsert_fitness_content(content)
-
-        return Response({"success": True, "embedding_id": embedding_id})
-
-    except Exception as e:
-        logger.error(f"Error upserting content: {str(e)}")
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@api_view(["DELETE"])
-@permission_classes([IsAuthenticated])
-@authentication_classes([CookieJWTAuthentication])
-def delete_content_view(request, embedding_id=None):
-    try:
-        if not embedding_id:
-            data = request.data
-            embedding_id = data.get("embedding_id")
-
-            if not embedding_id:
-                return Response(
-                    {"error": "Embedding ID is required"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-        delete_embedding(embedding_id)
-
-        return Response({"success": True})
-
-    except Exception as e:
-        logger.error(f"Error deleting content: {str(e)}")
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 @authentication_classes([CookieJWTAuthentication])
@@ -897,7 +772,7 @@ def fitness_content_search(request):
             query_text=query,
             content_type=content_type,
             difficulty_level=difficulty_level,
-            top_k=10,
+            top_k=5,
         )
 
         return Response({"results": results, "status": "success"})
@@ -1049,8 +924,6 @@ def ai_chat(request):
     user = request.user
     query = request.data.get("query")
 
-    from django.http import StreamingHttpResponse
-
     def stream_response():
         with client.messages.stream(
             model="claude-3-7-sonnet-20250219",
@@ -1064,5 +937,5 @@ def ai_chat(request):
 
     return StreamingHttpResponse(
         streaming_content=stream_response(),
-        content_type='text/plain',
+        content_type="text/plain",
     )

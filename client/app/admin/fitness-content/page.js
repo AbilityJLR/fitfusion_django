@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import Navbar from '@/app/components/Navbar'
@@ -321,6 +322,7 @@ export default function FitnessContentAdmin() {
 
                 {editingId && (
                   <button
+                    className='btn btn-warn'
                     type="button"
                     onClick={resetForm}
                   >
@@ -341,54 +343,56 @@ export default function FitnessContentAdmin() {
                 <p>No fitness content available. Add your first content above.</p>
               </div>
             ) : (
-              <div className={styles.contentList}>
+              < div className={styles.contentList}>
                 {contents.map((content) => (
                   <div key={content.id} className={styles.contentListBox}>
-                    <div>
-                      <div className={styles.retrieveContent}>
-                        <h3>{content.title}</h3>
-                        <iframe width="100%" height="300px"
-                          className={styles.video}
-                          src={getEmbedUrl(content.youtube_url)}
-                          title="YouTube Shorts video"
-                          frameBorder="0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen>
-                        </iframe>
-                        <p>
-                          <span className='badge-light'>{content.content_type}</span><span className='badge-light'>{
-                            content.difficulty_level === 1 ? 'Beginner' :
-                              content.difficulty_level === 2 ? 'Intermediate' :
-                                content.difficulty_level === 3 ? 'Advanced' :
-                                  content.difficulty_level === 4 ? 'Expert' : 'Professional'
-                          }</span>
-                        </p>
-                      </div>
-                      <div className={styles.descriptionContent}>{content.description}</div>
+                    <Link href={`/admin/fitness-content/${content.id}`}>
+                      <div>
+                        <div className={styles.retrieveContent}>
+                          <h3>{content.title}</h3>
+                          <iframe width="100%" height="300px"
+                            className={styles.video}
+                            src={getEmbedUrl(content.youtube_url)}
+                            title="YouTube Shorts video"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen>
+                          </iframe>
+                          <p>
+                            <span className='badge-light'>{content.content_type}</span><span className='badge-light'>{
+                              content.difficulty_level === 1 ? 'Beginner' :
+                                content.difficulty_level === 2 ? 'Intermediate' :
+                                  content.difficulty_level === 3 ? 'Advanced' :
+                                    content.difficulty_level === 4 ? 'Expert' : 'Professional'
+                            }</span>
+                          </p>
+                        </div>
+                        <div className={styles.descriptionContent}>{content.description}</div>
 
-                      <div className={styles.manageButtonBox}>
-                        <button
-                          className='btn btn-warn'
-                          onClick={() => handleEdit(content)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className='btn btn-danger'
-                          style={{ marginLeft: ".5rem", fontSize: ".875rem" }}
-                          onClick={() => handleDelete(content.id)}
-                        >
-                          Delete
-                        </button>
+                        <div className={styles.manageButtonBox}>
+                          <button
+                            className='btn btn-warn'
+                            onClick={() => handleEdit(content)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className='btn btn-danger'
+                            style={{ marginLeft: ".5rem", fontSize: ".875rem" }}
+                            onClick={() => handleDelete(content.id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
-                    </div>
 
 
-                    {content.embedding_id && (
-                      <div style={{ marginTop: "1rem" }}>
-                        <span className='badge-light'>Pinecone</span>
-                      </div>
-                    )}
+                      {content.embedding_id && (
+                        <div style={{ marginTop: "1rem" }}>
+                          <span className='badge-light'>Pinecone</span>
+                        </div>
+                      )}
+                    </Link>
                   </div>
                 ))}
               </div>
@@ -396,6 +400,6 @@ export default function FitnessContentAdmin() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   )
 } 

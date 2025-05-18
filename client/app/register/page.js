@@ -74,11 +74,17 @@ export default function Register() {
             <input className='form-input' type='email' name='email' value={formData.email} onChange={handleChange} placeholder='email' required />
             <label className='form-label'>username</label>
             <input className='form-input' name='username' value={formData.username} onChange={handleChange} placeholder='username' required />
-            <label className='form-label'>password</label>
-            <input className='form-input' type='password' name='password' value={formData.password} onChange={handleChange} placeholder='password' required />
-            <label className='form-label'>confirm password</label>
-            <input className='form-input' type='password' name='password2' value={formData.password2} onChange={handleChange} placeholder='confirm password' required />
-            <input className='btn btn-primary' type='submit' disabled={loading} />
+            <div className={style.test}>
+              <div>
+                <label className='form-label'>password</label>
+                <input className='form-input' type='password' name='password' value={formData.password} onChange={handleChange} placeholder='password' required />
+              </div>
+              <div>
+                <label className='form-label'>confirm password</label>
+                <input className='form-input' type='password' name='password2' value={formData.password2} onChange={handleChange} placeholder='confirm password' required />
+              </div>
+            </div>
+            <input className='btn btn-primary' style={{ marginTop: "1rem" }} type='submit' disabled={loading} />
           </form>
         </div>
       </div>

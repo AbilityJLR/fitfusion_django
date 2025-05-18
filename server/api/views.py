@@ -38,7 +38,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 httponly=True,
                 secure=True,
                 samesite="Lax",
-                max_age=30 * 24 * 60 * 60,  # 30 days in seconds
+                max_age=30 * 24 * 60 * 60,  
             )
             response.set_cookie(
                 key="refresh_token",
@@ -46,7 +46,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 httponly=True,
                 secure=True,
                 samesite="Lax",
-                max_age=30 * 24 * 60 * 60,  # 30 days in seconds
+                max_age=30 * 24 * 60 * 60,  
             )
 
         return response
@@ -66,7 +66,7 @@ class CustomTokenRefreshView(TokenRefreshView):
                 httponly=True,
                 secure=True,
                 samesite="Lax",
-                max_age=30 * 24 * 60 * 60,  # 30 days in seconds
+                max_age=30 * 24 * 60 * 60,  
             )
 
         return response

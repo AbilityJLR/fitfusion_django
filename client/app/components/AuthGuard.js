@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from './AuthProvider'
 
-const PUBLIC_PATHS = ['/login', '/register', '/forgot-password']
+const PUBLIC_PATHS = ['/', '/login', '/register', '/profile/setup']
 
 export default function AuthGuard({ children }) {
   const { isAuthenticated, isLoading } = useAuth()
@@ -18,7 +18,7 @@ export default function AuthGuard({ children }) {
       router.push('/dashboard');
       return;
     }
-    
+
     if (!isAuthenticated && !PUBLIC_PATHS.includes(pathname)) {
       router.push('/login');
     }
@@ -31,7 +31,7 @@ export default function AuthGuard({ children }) {
   if (pathname === '/login' && isAuthenticated) {
     return null;
   }
-  
+
   if (!isAuthenticated && !PUBLIC_PATHS.includes(pathname)) {
     return null;
   }

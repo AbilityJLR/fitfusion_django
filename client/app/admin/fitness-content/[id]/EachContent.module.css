@@ -1,0 +1,37 @@
+.container {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.innerContainer {
+  width: 60%;
+  background-color: var(--card-bg);
+  padding: 1rem;
+  border-radius: 1rem;
+}
+
+.video {
+  border-radius: 10px;
+}
+
+.badgeContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.description {
+  margin: 1rem 0;
+  background-color: var(--bg-color);
+  padding: 1rem;
+  border-radius: 1rem;
+}
+
+.bottomContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
