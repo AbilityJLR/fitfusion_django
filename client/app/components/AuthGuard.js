@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from './AuthProvider'
 
-const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password']
+const PUBLIC_PATHS = ['/', '/login', '/register', '/profile/setup']
 
 export default function AuthGuard({ children }) {
   const { isAuthenticated, isLoading } = useAuth()
