@@ -45,7 +45,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 value=access_token,
                 httponly=True,
                 secure=True,
-                samesite="None",  # Changed from Lax to None to allow cross-site
+                samesite=None,
                 max_age=30 * 24 * 60 * 60,
                 domain=domain,
             )
@@ -54,7 +54,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 value=refresh_token,
                 httponly=True,
                 secure=True,
-                samesite="None",  # Changed from Lax to None to allow cross-site
+                samesite=None,
                 max_age=30 * 24 * 60 * 60,
                 domain=domain,
             )
@@ -83,7 +83,7 @@ class CustomTokenRefreshView(TokenRefreshView):
                 value=response.data.get("access"),
                 httponly=True,
                 secure=True,
-                samesite="None",  # Changed from Lax to None to allow cross-site
+                samesite=None,
                 max_age=30 * 24 * 60 * 60,
                 domain=domain,
             )
