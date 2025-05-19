@@ -18,6 +18,7 @@ ALLOWED_HOSTS = ["*"]
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://fitfusion-backend-ocl4.onrender.com",
+    "https://fitfusion-frontend-j9jy.onrender.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
