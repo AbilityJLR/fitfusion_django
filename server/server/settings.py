@@ -16,25 +16,19 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
-# CORS Settings - Updated for production
+# Update CORS settings
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://fitfusion-backend-ocl4.onrender.com",
     "https://fitfusion-frontend-j9jy.onrender.com",
 ]
 
-# Add wildcard for development
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https?://localhost:3000$",
-]
-
-# Critical CORS settings
+# Additional CORS settings to fix cross-domain issues
 CORS_ALLOW_CREDENTIALS = True
-CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken', 'Authorization']
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 CORS_PREFLIGHT_MAX_AGE = 86400  # 24 hours in seconds
 
-# Allow all CORS headers
-CORS_ALLOW_ALL_HEADERS = True
+# Add these settings for additional CORS configuration
 CORS_ALLOW_METHODS = [
     "DELETE",
     "GET",
@@ -42,6 +36,24 @@ CORS_ALLOW_METHODS = [
     "PATCH",
     "POST",
     "PUT",
+]
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+# Add CORS trusted origins
+CORS_TRUSTED_ORIGINS = [
+    "https://fitfusion-frontend-j9jy.onrender.com",
+    "http://localhost:3000",
 ]
 
 INSTALLED_APPS = [
@@ -59,9 +71,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",

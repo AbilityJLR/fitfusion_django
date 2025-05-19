@@ -750,19 +750,10 @@ IMPORTANT:Your response must be ONLY valid JSON that follows the requested struc
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(["GET", "OPTIONS"])
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@authentication_classes([CookieJWTAuthentication])
 def fitness_content_search(request):
-    # Handle preflight OPTIONS request without authentication
-    if request.method == "OPTIONS":
-        return Response(status=status.HTTP_200_OK)
-        
-    # For GET requests, require authentication
-    if not request.user.is_authenticated:
-        return Response(
-            {"message": "Authentication required", "status": "error"},
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
-        
     query = request.GET.get("query", "")
     content_type = request.GET.get("content_type", None)
     difficulty_level = request.GET.get("difficulty_level", None)
