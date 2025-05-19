@@ -15,12 +15,19 @@ SECRET_KEY = "django-insecure--03kbei5scn-o&%y(=2qlwwbrxf-qimzsl)i1%jp%w#2gtb28r
 DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
+
+# Update CORS settings
+CORS_ALLOW_ALL_ORIGINS = False  # We'll use specific origins
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://fitfusion-backend-ocl4.onrender.com",
     "https://fitfusion-frontend-j9jy.onrender.com",
 ]
+
+# Additional CORS settings to fix cross-domain issues
 CORS_ALLOW_CREDENTIALS = True
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
+CORS_PREFLIGHT_MAX_AGE = 86400  # 24 hours in seconds
 
 # Add these settings for additional CORS configuration
 CORS_ALLOW_METHODS = [
@@ -159,7 +166,7 @@ SIMPLE_JWT = {
     "AUTH_COOKIE_REFRESH": "refresh_token",
     "AUTH_COOKIE_HTTP_ONLY": True,
     "AUTH_COOKIE_SECURE": True,
-    "AUTH_COOKIE_SAMESITE": None,
+    "AUTH_COOKIE_SAMESITE": "None",
     "ACCESS_TOKEN_LIFETIME": timedelta(days=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
 }

@@ -751,8 +751,7 @@ IMPORTANT:Your response must be ONLY valid JSON that follows the requested struc
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
-@authentication_classes([CookieJWTAuthentication])
+@permission_classes([AllowAny])
 def fitness_content_search(request):
     query = request.GET.get("query", "")
     content_type = request.GET.get("content_type", None)
