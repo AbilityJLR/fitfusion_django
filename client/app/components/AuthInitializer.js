@@ -8,10 +8,7 @@ import { setupAxiosInterceptors } from '../utils/auth'
  */
 export default function AuthInitializer() {
   useEffect(() => {
-    // Only run on the client
-    if (typeof window !== 'undefined') {
-      setupAxiosInterceptors()
-    }
+    setupAxiosInterceptors()
   }, [])
 
   return null

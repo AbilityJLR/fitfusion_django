@@ -32,21 +32,31 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             access_token = tokens.get("access")
             refresh_token = tokens.get("refresh")
 
+            # Get the domain from the request or use None for localhost
+            domain = None
+            if request.get_host():
+                host = request.get_host().split(':')[0]
+                # Only set domain for non-localhost domains
+                if host != 'localhost' and host != '127.0.0.1':
+                    domain = host
+
             response.set_cookie(
                 key="access_token",
                 value=access_token,
                 httponly=True,
                 secure=True,
-                samesite="Lax",
-                max_age=30 * 24 * 60 * 60,  
+                samesite="None",  # Changed from Lax to None to allow cross-site
+                max_age=30 * 24 * 60 * 60,
+                domain=domain,
             )
             response.set_cookie(
                 key="refresh_token",
                 value=refresh_token,
                 httponly=True,
                 secure=True,
-                samesite="Lax",
-                max_age=30 * 24 * 60 * 60,  
+                samesite="None",  # Changed from Lax to None to allow cross-site
+                max_age=30 * 24 * 60 * 60,
+                domain=domain,
             )
 
         return response
@@ -60,13 +70,22 @@ class CustomTokenRefreshView(TokenRefreshView):
         response = super().post(request, *args, **kwargs)
 
         if response.status_code == 200:
+            # Get the domain from the request or use None for localhost
+            domain = None
+            if request.get_host():
+                host = request.get_host().split(':')[0]
+                # Only set domain for non-localhost domains
+                if host != 'localhost' and host != '127.0.0.1':
+                    domain = host
+                    
             response.set_cookie(
                 key="access_token",
                 value=response.data.get("access"),
                 httponly=True,
                 secure=True,
-                samesite="Lax",
-                max_age=30 * 24 * 60 * 60,  
+                samesite="None",  # Changed from Lax to None to allow cross-site
+                max_age=30 * 24 * 60 * 60,
+                domain=domain,
             )
 
         return response
@@ -642,6 +661,15 @@ def fitness_content_search_view(request):
 @authentication_classes([CookieJWTAuthentication])
 def logout_view(request):
     response = Response({"message": "Successfully logged out."})
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
+    
+    # Get the domain from the request or use None for localhost
+    domain = None
+    if request.get_host():
+        host = request.get_host().split(':')[0]
+        # Only set domain for non-localhost domains
+        if host != 'localhost' and host != '127.0.0.1':
+            domain = host
+            
+    response.delete_cookie("access_token", domain=domain)
+    response.delete_cookie("refresh_token", domain=domain)
     return response

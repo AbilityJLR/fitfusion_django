@@ -14,16 +14,13 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Only run on the client
-        if (typeof window !== 'undefined') {
-          initAuth()
-          
-          const authenticated = await isAuthenticated()
-          setAuth({
-            isAuthenticated: authenticated,
-            isLoading: false
-          })
-        }
+        initAuth()
+        
+        const authenticated = await isAuthenticated()
+        setAuth({
+          isAuthenticated: authenticated,
+          isLoading: false
+        })
       } catch (error) {
         console.error('Auth initialization error:', error)
         setAuth({

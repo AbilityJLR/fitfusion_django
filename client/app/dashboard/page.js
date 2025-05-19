@@ -37,15 +37,7 @@ export default function Dashboard() {
         localStorage.setItem('recommendations', JSON.stringify(recommendationData))
       }
     } catch (err) {
-      console.error('Error loading recommendations:', err)
-      setError('Failed to load recommendations. Please ensure you are logged in.')
-      
-      // Check if error is due to authentication
-      if (err.response?.status === 401) {
-        console.log('Authentication issue detected. Redirecting to login...')
-        // Add a small delay before redirecting
-        setTimeout(() => router.push('/login'), 2000)
-      }
+      console.log('Error loading recommendations:', err)
     } finally {
       setLoading(false)
     }
@@ -148,8 +140,7 @@ export default function Dashboard() {
             <h2>Welcome to your Fitness Dashboard</h2>
             <p>Here you can get recommendations, and chat with our AI assistant.</p>
             <button className='btn btn-primary' onClick={handleRecommendBotton}>Recommend me</button>
-            {loading && <div className="loading-indicator">Loading recommendations...</div>}
-            {error && <div className="error-message">{error}</div>}
+            {loading ? 'loading recommendations...' : ""}
             <div>
               {recommendations?.detailedWeeklySchedule &&
                 Object.entries(recommendations.detailedWeeklySchedule).map(([day, data], index) => (
