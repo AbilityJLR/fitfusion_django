@@ -9,22 +9,17 @@ export const getSearch = async (query, contentType = '', difficultyLevel = '') =
     if (contentType) params.append('content_type', contentType);
     if (difficultyLevel) params.append('difficulty_level', difficultyLevel);
     
-    // First try with credentials
-    try {
-      const response = await axios.get(`${API_URL}/api/fitness-content/search/?${params.toString()}`, {
-        withCredentials: true
-      });
-      return response.data.results || [];
-    } catch (credentialError) {
-      console.warn('Search with credentials failed, trying without credentials:', credentialError);
-      // If that fails, try without credentials since we've made the endpoint public
-      const fallbackResponse = await axios.get(`${API_URL}/api/fitness-content/search/?${params.toString()}`, {
-        withCredentials: false
-      });
-      return fallbackResponse.data.results || [];
-    }
+    const response = await axios.get(`${API_URL}/api/fitness-content/search/?${params.toString()}`, {
+      withCredentials: true
+    });
+    
+    return response.data.results || [];
   } catch (error) {
     console.error('Search error:', error);
+    // If unauthorized, return empty results
+    if (error.response?.status === 401) {
+      return [];
+    }
     throw new Error(error.response?.data?.message || 'An error occurred while searching');
   }
 };
